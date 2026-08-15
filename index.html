@@ -318,6 +318,7 @@ input:focus{border-color:var(--peri);outline:none}
         <button class="fire" id="btnFire2"><span class="ammoText">12<small>PELURU</small></span></button>
       </div>
       <div class="pills">
+        <button class="mini" id="btnView">Tampilan: minimal</button>
         <button class="mini" id="btnReload">Isi ulang</button>
         <button class="mini" id="btnQuit">Keluar</button>
       </div>
@@ -461,7 +462,7 @@ const S = {
   ammo:CFG.mag, reloading:false, lastShot:0,
   lock:null, marks:new Map(),
   heading:0, pos:null, drone:null, raf:0, scanT:0, posT:0,
-  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0
+  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0, overlay:'min'
 };
 
 /* ---------------- helpers ---------------- */
@@ -1174,14 +1175,33 @@ function figColor(fg){
   const c=S.cal[fg.p.band];
   return c ? `hsl(${c.hue} 92% 60%)` : bandOf(fg.p.band).hex;
 }
+const VIEW={ full:'Tampilan: penuh', min:'Tampilan: minimal', off:'Tampilan: bersih' };
+function cycleView(){
+  const order=['min','full','off'];
+  S.overlay = order[(order.indexOf(S.overlay)+1) % order.length];
+  const b=$('#btnView'); if(b) b.textContent=VIEW[S.overlay];
+  drawFigures();
+}
 function drawFigures(){
   sizeSilo();
   octx.clearRect(0,0,innerWidth,innerHeight);
-  if(S.mode!=='body') return;
+  if(S.mode!=='body' || S.overlay==='off') return;
   const stale = now()-AI.t > 900;
   octx.globalAlpha = stale ? .35 : 1;
+  const lockId = S.lock && S.lock.id;
 
   for(const fg of AI.figs){
+    // minimal: outline only the person you are actually aiming at; everyone
+    // else gets a single dot, which is enough to know they are on screen
+    if(S.overlay==='min' && (!fg.p || fg.p.id!==lockId)){
+      if(fg.p){
+        const [dx,dy]=videoToScreen(fg.nb.x+fg.nb.w/2, fg.nb.y+fg.nb.h*0.12);
+        octx.fillStyle=figColor(fg); octx.globalAlpha=(stale?.2:.55);
+        octx.beginPath(); octx.arc(dx,dy,4,0,7); octx.fill();
+        octx.globalAlpha=stale?.35:1;
+      }
+      continue;
+    }
     const col=figColor(fg);
     const [x0,y0]=videoToScreen(fg.nb.x, fg.nb.y);
     const [x1,y1]=videoToScreen(fg.nb.x+fg.nb.w, fg.nb.y+fg.nb.h);
@@ -1230,6 +1250,7 @@ function drawFigures(){
       octx.stroke(); octx.setLineDash([]);
     }
 
+    if(S.overlay==='min') continue;
     const label = fg.p ? fg.p.name + (fg.head?'  ×2':'') : 'ORANG ?';
     octx.font='600 12px "Martian Mono", monospace';
     const tw=octx.measureText(label).width;
@@ -1427,6 +1448,8 @@ async function startRound(){
   else { S.players.set(S.me.id, S.me); [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;}); }
   $('#meName').textContent=S.me.name;
   $('#radar').hidden = S.mode!=='field';
+  $('#btnView').hidden = S.mode!=='body';
+  $('#btnView').textContent = VIEW[S.overlay];
   paintHP(); paintAmmo(); paintScore(); $('#feed').innerHTML='';
   show(''); $('#ar').classList.add('on');
   try{ await startCam(); }
@@ -1482,6 +1505,7 @@ function endRound(){
 /* ---------------- input ---------------- */
 $$('.fire').forEach(b=>b.addEventListener('pointerdown', e=>{ e.preventDefault(); fire(); }));
 $('#btnReload').onclick = reload;
+$('#btnView').onclick = cycleView;
 $('#btnQuit').onclick = ()=>{ endRound(); };
 $('#ar').addEventListener('pointerdown', e=>{ if(e.target.closest('.hud')) return; fire(); });
 window.addEventListener('keydown', e=>{ if(!S.started) return;
