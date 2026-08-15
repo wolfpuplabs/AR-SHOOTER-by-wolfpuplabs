@@ -3,195 +3,266 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0C0D0B">
+<meta name="theme-color" content="#0B0E14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>TANDA / AR Laser Tag</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;600;700&family=Azeret+Mono:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Martian+Mono:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#0C0D0B; --char:#14150F; --glass:rgba(10,11,8,.66);
-  --line:rgba(255,255,255,.18); --line2:rgba(255,255,255,.08);
-  --hz:#FFC400; --hz-d:#8A6A00;
-  --hit:#FF2D20; --ok:#A6FF00;
-  --txt:#F2F1E9; --dim:rgba(242,241,233,.55);
+  --bg:#0B0E14; --bg2:#121826;
+  --pane:rgba(18,25,37,.72); --pane-lo:rgba(18,25,37,.5);
+  --edge:rgba(170,198,255,.20); --edge-hi:rgba(214,232,255,.44);
+  --ink:#E9EFFA; --dim:rgba(233,239,250,.56); --faint:rgba(233,239,250,.3);
+  --mint:#7DF9D9; --peri:#8FB8FF; --lilac:#C6A6FF; --coral:#FF6B57; --ok:#8BFFC7;
   --c1:#00E0FF; --c2:#FF2F92; --c3:#A6FF00; --c4:#FF7A00;
-  --pad: env(safe-area-inset-bottom, 0px);
+  --r:22px; --pad:env(safe-area-inset-bottom,0px);
+  --lift:0 20px 44px -24px rgba(0,0,0,.95), 0 2px 10px -6px rgba(0,0,0,.7);
+  --gap:clamp(10px,2.6vw,16px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-html,body{height:100svh;overflow:hidden;background:var(--ink);color:var(--txt);
-  font-family:'Bai Jamjuree',system-ui,sans-serif;overscroll-behavior:none}
+html,body{height:100svh;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:'Instrument Sans',system-ui,sans-serif;overscroll-behavior:none;
+  font-size:clamp(15px,1.6vh + .6vw,17px)}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
-:focus-visible{outline:2px solid var(--hz);outline-offset:2px}
+:focus-visible{outline:2px solid var(--peri);outline-offset:3px;border-radius:8px}
+.mono{font-family:'Martian Mono',ui-monospace,monospace}
 
-/* ---------- hazard motif: the structural signature ---------- */
-.hazard{height:10px;background:repeating-linear-gradient(115deg,var(--hz) 0 14px,var(--ink) 14px 28px);flex:none}
-.hazard.thin{height:5px;opacity:.85}
-.clip{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+/* ---------- ambient depth field ---------- */
+.aura{position:fixed;inset:-20%;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(42vmax 42vmax at 18% 12%, rgba(125,249,217,.13), transparent 62%),
+    radial-gradient(46vmax 46vmax at 86% 24%, rgba(198,166,255,.13), transparent 62%),
+    radial-gradient(52vmax 52vmax at 50% 108%, rgba(143,184,255,.14), transparent 60%);
+  animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(0,-3%,0) scale(1.06)}}
 
 /* ---------- screens ---------- */
-.screen{position:fixed;left:0;right:0;top:var(--vtop,0px);height:var(--vh,100dvh);
-  display:none;flex-direction:column;z-index:10}
+.screen{position:fixed;left:0;right:0;top:0;height:100svh;display:none;flex-direction:column;z-index:10}
 .screen.on{display:flex}
-.scroll{flex:1;overflow-y:auto;padding:22px 20px calc(28px + var(--pad));-webkit-overflow-scrolling:touch}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;
+  padding:max(20px,env(safe-area-inset-top,0px)) var(--gap) calc(28px + var(--pad))}
+.wrap{width:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:var(--gap)}
 
-.eyebrow{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.28em;
-  text-transform:uppercase;color:var(--hz);display:flex;gap:10px;align-items:center}
-.eyebrow::after{content:"";flex:1;height:1px;background:var(--line2)}
-h1{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(38px,13vw,62px);
-  line-height:.92;letter-spacing:-.04em;margin:14px 0 6px;text-transform:uppercase}
-h1 em{font-style:normal;color:var(--hz);display:block}
-.lede{color:var(--dim);font-size:15px;line-height:1.5;max-width:44ch}
+/* floating panes */
+.pane{background:var(--pane);border:1px solid var(--edge);border-radius:var(--r);
+  padding:clamp(15px,3.4vw,20px);box-shadow:var(--lift);position:relative;overflow:hidden}
+.pane::before{content:"";position:absolute;inset:0 0 auto;height:1px;
+  background:linear-gradient(90deg,transparent,var(--edge-hi),transparent)}
+.pane h3{font-size:.78rem;font-weight:600;letter-spacing:.02em;color:var(--dim);margin-bottom:12px}
 
-.card{background:var(--char);border:1px solid var(--line2);padding:16px;margin-top:14px}
-.card h3{font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-family:'Azeret Mono',monospace;
-  color:var(--dim);font-weight:400;margin-bottom:12px}
+.hero{padding-top:clamp(10px,5vh,44px)}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim);font-family:'Martian Mono',monospace}
+.kicker i{width:7px;height:7px;border-radius:50%;background:var(--mint);
+  box-shadow:0 0 12px var(--mint);animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+h1{font-size:clamp(2.6rem,13vw,4.4rem);line-height:.94;letter-spacing:-.045em;font-weight:700;margin:.35em 0 .2em}
+h1 em{font-style:normal;background:linear-gradient(96deg,var(--mint),var(--peri) 46%,var(--lilac));
+  -webkit-background-clip:text;background-clip:text;color:transparent;display:block}
+.lede{color:var(--dim);line-height:1.55;max-width:46ch;font-size:.95rem}
 
-.btn{display:flex;align-items:center;gap:12px;width:100%;padding:17px 18px;margin-top:10px;
-  background:var(--hz);color:#0C0D0B;font-weight:700;font-size:17px;letter-spacing:.01em;
-  transition:transform .12s ease,filter .12s ease}
-.btn:active{transform:translateY(2px);filter:brightness(.92)}
-.btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
-.btn .k{font-family:'Azeret Mono',monospace;font-size:12px;opacity:.6;margin-left:auto}
-.btn[disabled]{opacity:.4;pointer-events:none}
+/* option tiles */
+.opts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.opt{padding:14px;border:1px solid var(--edge);border-radius:16px;background:var(--pane-lo);
+  text-align:left;transition:transform .18s cubic-bezier(.2,.9,.3,1),border-color .18s,background .18s}
+.opt b{display:block;font-size:1rem;font-weight:600;margin-bottom:4px}
+.opt span{font-size:.74rem;color:var(--dim);line-height:1.35;display:block}
+.opt:active{transform:scale(.97)}
+.opt[aria-pressed="true"]{border-color:var(--edge-hi);background:linear-gradient(180deg,rgba(143,184,255,.16),rgba(143,184,255,.05))}
+.opt[aria-pressed="true"] b{color:var(--peri)}
+.note{font-size:.8rem;color:var(--dim);line-height:1.55;margin-top:12px}
+.note b{color:var(--ink);font-weight:600}
 
-.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.opt{padding:12px 8px;border:1px solid var(--line2);background:#0F100C;text-align:center}
-.opt b{display:block;font-size:14px;margin-bottom:3px}
-.opt span{font-size:11px;color:var(--dim);line-height:1.3;display:block}
-.opt[aria-pressed="true"]{border-color:var(--hz);background:rgba(255,196,0,.09)}
-.opt[aria-pressed="true"] b{color:var(--hz)}
+/* fields */
+label.f{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 8px;font-family:'Martian Mono',monospace}
+input{width:100%;padding:15px 16px;background:rgba(9,12,18,.6);border:1px solid var(--edge);
+  border-radius:14px;color:var(--ink);font-family:'Martian Mono',monospace;font-size:1.1rem;letter-spacing:.14em}
+input::placeholder{color:var(--faint)}
+input:focus{border-color:var(--peri);outline:none}
 
-input{width:100%;padding:15px;background:#0F100C;border:1px solid var(--line);color:var(--txt);
-  font-family:'Azeret Mono',monospace;font-size:20px;letter-spacing:.2em;text-transform:uppercase}
-input::placeholder{color:rgba(242,241,233,.25);letter-spacing:.1em}
-label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
-  margin:14px 0 7px;font-family:'Azeret Mono',monospace}
+/* colour orbs */
+.bands{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+.band{aspect-ratio:1;border-radius:50%;position:relative;border:0;
+  transition:transform .2s cubic-bezier(.2,.9,.3,1)}
+.band::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid transparent;transition:border-color .2s}
+.band[aria-pressed="true"]{transform:scale(.9)}
+.band[aria-pressed="true"]::after{border-color:var(--edge-hi)}
+.band b{position:absolute;inset:0;display:grid;place-items:center;font-size:.62rem;
+  font-family:'Martian Mono',monospace;color:rgba(0,0,0,.62)}
 
-/* band picker */
-.bands{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.band{aspect-ratio:1;border:2px solid transparent;position:relative;display:grid;place-items:center;
-  font-family:'Azeret Mono',monospace;font-size:10px;color:rgba(0,0,0,.62);font-weight:700}
-.band[aria-pressed="true"]{border-color:var(--txt);box-shadow:0 0 0 3px rgba(0,0,0,.6) inset}
-.band[disabled]{opacity:.22}
+/* buttons */
+.btn{display:flex;align-items:center;gap:10px;width:100%;padding:17px 20px;border-radius:16px;
+  font-weight:600;font-size:1rem;justify-content:center;
+  background:linear-gradient(180deg,#EAF2FF,#BFD4F5);color:#0B0E14;
+  box-shadow:0 14px 30px -16px rgba(143,184,255,.8);
+  transition:transform .14s cubic-bezier(.2,.9,.3,1),filter .14s}
+.btn:active{transform:translateY(2px) scale(.99);filter:brightness(.94)}
+.btn.ghost{background:var(--pane-lo);color:var(--ink);border:1px solid var(--edge);box-shadow:none}
+.btn .k{font-family:'Martian Mono',monospace;font-size:.68rem;opacity:.55;margin-left:auto}
+.stack{display:flex;flex-direction:column;gap:10px}
 
-/* roster */
-.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2)}
-.chip{width:16px;height:16px;flex:none;border-radius:2px}
+/* roster rows */
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.row:last-child{border:0}
+.chip{width:12px;height:12px;flex:none;border-radius:50%;box-shadow:0 0 12px currentColor}
 .row .nm{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row .st{font-family:'Azeret Mono',monospace;font-size:12px;color:var(--dim)}
-.code{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(44px,17vw,74px);
-  letter-spacing:.14em;color:var(--hz);line-height:1}
+.row .st{font-family:'Martian Mono',monospace;font-size:.72rem;color:var(--dim)}
+.code{font-family:'Martian Mono',monospace;font-weight:800;font-size:clamp(2.6rem,15vw,4rem);
+  letter-spacing:.1em;line-height:1;
+  background:linear-gradient(96deg,var(--mint),var(--peri) 50%,var(--lilac));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
 
-/* ---------- AR view ---------- */
-#ar{position:fixed;left:0;right:0;top:var(--vtop,0px);height:var(--vh,100dvh);background:#000;z-index:5;display:none}
+/* ---------- AR layer ---------- */
+#ar{position:fixed;left:0;right:0;top:0;height:100svh;background:#000;z-index:5;display:none}
 #ar.on{display:block}
-#ar,.screen{overflow:hidden}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #scan{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 #fx{position:absolute;inset:0;pointer-events:none}
+#vignette{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 88% at 50% 46%,transparent 46%,rgba(0,0,0,.55) 100%)}
 
-/* reticle — the signature element */
-#ret{position:absolute;left:50%;top:50%;width:112px;height:112px;margin:-56px 0 0 -56px;pointer-events:none;
-  transition:transform .14s cubic-bezier(.2,.9,.3,1)}
+/* reticle */
+#ret{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;pointer-events:none;
+  transition:transform .18s cubic-bezier(.2,.9,.3,1)}
 #ret svg{width:100%;height:100%;overflow:visible}
-#ret .brk{stroke:var(--txt);stroke-width:2;fill:none;opacity:.75;transition:all .14s}
-#ret.lock{transform:scale(.82)}
-#ret.lock .brk{stroke:var(--hit);opacity:1;stroke-width:3}
-#ret .dot{fill:var(--hz)}
+#ret .ring{fill:none;stroke:rgba(233,239,250,.5);stroke-width:1.5}
+#ret .brk{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linecap:round;
+  transition:stroke .16s,opacity .16s}
+#ret .dot{fill:var(--mint)}
+#ret.lock{transform:scale(.86)}
+#ret.lock .brk{stroke:var(--coral)}
+#ret.lock .ring{stroke:rgba(255,107,87,.5)}
+#ret.lock .dot{fill:var(--coral)}
 #ret.fire .dot{fill:#fff}
-#lockName{position:absolute;left:50%;top:calc(50% + 66px);transform:translateX(-50%);
-  font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--hit);
-  text-transform:uppercase;opacity:0;transition:opacity .12s;white-space:nowrap}
+#lockName{position:absolute;left:50%;top:calc(50% + 74px);transform:translateX(-50%);
+  font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.14em;color:var(--coral);
+  text-transform:uppercase;opacity:0;transition:opacity .14s;white-space:nowrap;text-shadow:0 2px 8px #000}
 #ret.lock ~ #lockName{opacity:1}
 
-.mark{position:absolute;border:2px solid;pointer-events:none;
-  clip-path:polygon(0 0,34% 0,0 34%,0 0,100% 0,100% 34%,66% 0,100% 0,100% 100%,66% 100%,100% 66%,100% 100%,0 100%,0 66%,34% 100%,0 100%);
+/* tracking boxes */
+.mark{position:absolute;border:2px solid;border-radius:10px;pointer-events:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 22px -6px currentColor;
   transition:left .08s linear,top .08s linear,width .12s linear,height .12s linear}
-
-.bmark{position:absolute;border:2px solid var(--txt);pointer-events:none;
-  box-shadow:0 0 0 1px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.35);
+.bmark{position:absolute;border:2px solid var(--ink);border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.45);
   transition:left .1s linear,top .1s linear,width .1s linear,height .1s linear}
-.bmark::before,.bmark::after{content:"";position:absolute;left:-2px;right:-2px;height:16%;
-  border:inherit;border-width:2px 2px 0 2px}
-.bmark::after{bottom:0;top:auto;border-width:0 2px 2px 2px}
-.bmark span{position:absolute;top:-11px;left:-2px;font-family:'Azeret Mono',monospace;font-size:10px;
-  letter-spacing:.14em;padding:2px 6px;background:#0C0D0B;white-space:nowrap}
-.bmark.head{border-style:dashed}
-.bmark.head.est{border-style:dotted;opacity:.85}
+.bmark::before,.bmark::after{content:"";position:absolute;left:-2px;right:-2px;height:18%;
+  border:inherit;border-width:2px 2px 0 2px;border-radius:14px 14px 0 0}
+.bmark::after{bottom:0;top:auto;border-width:0 2px 2px 2px;border-radius:0 0 14px 14px}
+.bmark span{position:absolute;top:-13px;left:-1px;font-family:'Martian Mono',monospace;font-size:.62rem;
+  letter-spacing:.1em;padding:3px 8px;border-radius:8px;background:rgba(11,14,20,.9);white-space:nowrap}
+.bmark.head{border-style:dashed;border-radius:50%}
 .bmark.head::before,.bmark.head::after{display:none}
-.bmark.head span{top:auto;bottom:-11px}
-.bmark.unknown{border-color:rgba(255,255,255,.35)}
+.bmark.head span{top:auto;bottom:-13px;left:50%;transform:translateX(-50%)}
+.bmark.head.est{border-style:dotted;opacity:.8}
+.bmark.unknown{border-color:rgba(233,239,250,.32)}
 .bmark.unknown span{color:var(--dim)}
 
-/* HUD */
+/* ---------- HUD ---------- */
 .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;
-  padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(14px + var(--pad))}
+  padding:max(14px,env(safe-area-inset-top,0px)) var(--gap) calc(var(--gap) + var(--pad))}
 .hud > *{pointer-events:auto}
+.glass{background:rgba(11,14,20,.62);border:1px solid var(--edge);border-radius:16px;
+  box-shadow:var(--lift);padding:10px 13px}
 .top{display:flex;gap:10px;align-items:flex-start}
-.plate{background:rgba(10,11,8,.78);border:1px solid var(--line2);padding:9px 12px}
-.hud{padding-top:max(12px, env(safe-area-inset-top,0px))}
-.hp{flex:1;max-width:min(260px,46vw)}
-.hp .lbl{display:flex;justify-content:space-between;font-family:'Azeret Mono',monospace;font-size:10px;
-  letter-spacing:.18em;color:var(--dim);margin-bottom:6px;text-transform:uppercase}
-.hpbar{height:7px;background:rgba(255,255,255,.12);overflow:hidden}
-.hpbar i{display:block;height:100%;width:100%;background:var(--ok);transition:width .2s,background .2s}
-.hpbar i.low{background:var(--hit)}
-#score{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.1em;line-height:1.7;margin-left:auto;text-align:right}
-#score b{color:var(--hz)}
-.mid{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-#feed{font-family:'Azeret Mono',monospace;font-size:clamp(9px,2.5vw,11px);line-height:1.7;
-  color:var(--dim);max-width:58%;text-shadow:0 1px 6px #000}
-#feed b{color:var(--txt)}
-#radar{width:clamp(66px,20vw,96px);height:clamp(66px,20vw,96px);flex:none;background:var(--glass);border:1px solid var(--line2)}
-.bot{display:flex;align-items:center;gap:clamp(7px,2.4vw,14px);margin-top:10px;flex-wrap:nowrap}
-#ammo{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(19px,6vw,30px);flex:none;letter-spacing:.02em;
-  text-shadow:0 2px 12px rgba(0,0,0,.8);line-height:1}
-#ammo small{font-size:13px;font-weight:400;color:var(--dim)}
-#ammo.empty{color:var(--hit)}
-.fire{width:clamp(62px,17vw,88px);height:clamp(62px,17vw,88px);flex:none;border-radius:50%;margin-left:auto;background:rgba(255,196,0,.14);
-  border:2px solid var(--hz);color:var(--hz);font-family:'Azeret Mono',monospace;font-weight:900;
-  font-size:clamp(10px,2.6vw,13px);letter-spacing:.1em;display:grid;place-items:center;transition:transform .07s,background .07s}
-.fire:active{transform:scale(.93);background:rgba(255,196,0,.34)}
-.mini{font-family:'Azeret Mono',monospace;font-size:clamp(9px,2.4vw,11px);letter-spacing:.1em;
-  padding:clamp(8px,2.4vw,11px) clamp(9px,2.6vw,13px);white-space:nowrap;
-  background:var(--glass);border:1px solid var(--line2);text-transform:uppercase}
+.hp{flex:1;max-width:min(300px,48vw)}
+.hp .lbl{display:flex;justify-content:space-between;align-items:baseline;
+  font-family:'Martian Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--dim);margin-bottom:7px}
+.hp .lbl b{color:var(--ink);font-size:.8rem}
+.hpbar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+.hpbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mint),var(--ok));
+  transition:width .28s cubic-bezier(.2,.9,.3,1),background .28s}
+.hpbar i.low{background:linear-gradient(90deg,var(--coral),#FFA07A)}
+#score{margin-left:auto;font-family:'Martian Mono',monospace;font-size:.68rem;line-height:1.9;text-align:right}
+#score b{color:var(--ink)}
+.mid{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;min-height:0}
+#feed{font-family:'Martian Mono',monospace;font-size:.62rem;line-height:1.8;color:var(--dim);
+  max-width:56%;text-shadow:0 1px 8px #000}
+#feed b{color:var(--ink)}
+#radar{width:clamp(74px,20vw,104px);height:clamp(74px,20vw,104px);flex:none;
+  border-radius:50%;border:1px solid var(--edge);background:rgba(11,14,20,.62);box-shadow:var(--lift)}
 
-#ar.on ~ .toast{display:none}
-#calbar{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+#calbar{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 #calbar::-webkit-scrollbar{display:none}
-.cal{flex:none}
-.cal{font-family:'Azeret Mono',monospace;font-size:10px;letter-spacing:.1em;padding:8px 10px;
-  background:rgba(10,11,8,.78);border:1px solid var(--line2);border-left:4px solid;text-transform:uppercase}
-.cal b{color:var(--hz);font-weight:700}
-.cal i{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:-1px;border-radius:2px}
-.cal em{font-style:normal;color:var(--hz);opacity:.8}
-.cal.hot{border-color:var(--ok);border-left-color:var(--ok)}
-#diag{font-family:'Azeret Mono',monospace;font-size:10px;line-height:1.7;margin-top:8px;color:var(--dim);white-space:pre}
-#diag b{color:var(--txt);font-weight:400}
+.cal{flex:none;display:flex;align-items:center;gap:7px;font-family:'Martian Mono',monospace;
+  font-size:.62rem;letter-spacing:.06em;padding:9px 12px;border-radius:99px;
+  background:rgba(11,14,20,.66);border:1px solid var(--edge);text-transform:uppercase}
+.cal i{width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.cal b{color:var(--ink)}
+.cal em{font-style:normal;color:var(--peri)}
+.cal.hot{border-color:var(--ok);box-shadow:0 0 18px -6px var(--ok)}
+#diag{font-family:'Martian Mono',monospace;font-size:.6rem;line-height:1.9;color:var(--dim);
+  white-space:pre;margin-top:8px;border-radius:14px}
+#diag b{color:var(--ink);font-weight:400}
 
-/* full-screen feedback layers */
-#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(120% 90% at 50% 50%,transparent 42%,var(--hit) 100%)}
-#flash.on{animation:hurt .42s ease-out}
-@keyframes hurt{0%{opacity:.95}100%{opacity:0}}
-#muzzle{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(60% 40% at 50% 62%,rgba(255,255,255,.5),transparent 70%)}
+/* trigger cluster */
+.bot{display:flex;align-items:flex-end;gap:10px;margin-top:12px}
+.pills{display:flex;flex-direction:column;gap:8px}
+.mini{font-family:'Martian Mono',monospace;font-size:.62rem;letter-spacing:.08em;padding:11px 14px;
+  border-radius:99px;background:rgba(11,14,20,.62);border:1px solid var(--edge);
+  text-transform:uppercase;white-space:nowrap;transition:transform .12s}
+.mini:active{transform:scale(.95)}
+.trigger{position:relative;width:var(--tw);height:var(--tw);margin-left:auto;flex:none;
+  --tw:clamp(80px,23vw,108px)}
+.trigger.alt{display:none;margin:0 auto 0 0}
+.trigger svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.trigger .track{fill:none;stroke:rgba(255,255,255,.13);stroke-width:5}
+.trigger .fill{fill:none;stroke:url(#gtrig);stroke-width:5;stroke-linecap:round;
+  transition:stroke-dashoffset .22s cubic-bezier(.2,.9,.3,1)}
+.fire{position:absolute;inset:9px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(120% 120% at 50% 18%,rgba(143,184,255,.32),rgba(11,14,20,.72));
+  border:1px solid var(--edge-hi);box-shadow:var(--lift), inset 0 1px 0 rgba(255,255,255,.18);
+  transition:transform .08s,background .08s}
+.fire:active{transform:scale(.93);background:radial-gradient(120% 120% at 50% 18%,rgba(143,184,255,.6),rgba(11,14,20,.8))}
+.ammoText{font-family:'Martian Mono',monospace;font-weight:800;font-size:clamp(1.1rem,4.6vw,1.5rem);line-height:1}
+.ammoText small{display:block;font-size:.52rem;font-weight:400;color:var(--dim);letter-spacing:.1em;margin-top:3px}
+.ammoText.empty{color:var(--coral)}
+
+/* feedback */
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(120% 90% at 50% 50%,transparent 38%,rgba(255,107,87,.92) 100%)}
+#flash.on{animation:hurt .5s ease-out}
+@keyframes hurt{0%{opacity:1}100%{opacity:0}}
+#muzzle{position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(50% 34% at 50% 50%,rgba(233,239,250,.4),transparent 70%)}
 #muzzle.on{animation:mz .1s ease-out}
 @keyframes mz{0%{opacity:1}100%{opacity:0}}
-#banner{position:absolute;left:0;right:0;top:38%;text-align:center;pointer-events:none;opacity:0}
-#banner.on{animation:bn 1.5s ease-out}
-#banner b{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(30px,11vw,52px);
-  letter-spacing:-.02em;text-transform:uppercase;text-shadow:0 4px 20px #000}
-#banner span{display:block;font-family:'Azeret Mono',monospace;font-size:12px;letter-spacing:.3em;color:var(--dim)}
-@keyframes bn{0%{opacity:0;transform:scale(1.15)}18%{opacity:1;transform:scale(1)}72%{opacity:1}100%{opacity:0}}
+#banner{position:absolute;left:0;right:0;top:34%;text-align:center;pointer-events:none;opacity:0}
+#banner b{display:block;font-size:clamp(2rem,10vw,3.4rem);font-weight:700;letter-spacing:-.03em;
+  text-shadow:0 6px 26px rgba(0,0,0,.9)}
+#banner span{display:block;font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.24em;
+  color:var(--dim);margin-top:8px}
+#banner.on{animation:bn 1.6s cubic-bezier(.2,.9,.3,1)}
+@keyframes bn{0%{opacity:0;transform:translateY(14px) scale(1.08)}16%{opacity:1;transform:none}70%{opacity:1}100%{opacity:0}}
 
-.toast{position:fixed;left:14px;right:14px;z-index:60;
-  top:calc(var(--vtop,0px) + var(--vh,100dvh) - 104px);background:var(--hz);
-  color:#0C0D0B;padding:14px 16px;font-weight:600;font-size:14px;transform:translateY(140%);
-  transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+.toast{position:fixed;left:var(--gap);right:var(--gap);bottom:calc(20px + var(--pad));z-index:60;
+  max-width:520px;margin:0 auto;background:rgba(18,25,37,.94);border:1px solid var(--edge);
+  border-radius:16px;box-shadow:var(--lift);padding:15px 17px;font-size:.86rem;line-height:1.5;
+  transform:translateY(180%);transition:transform .34s cubic-bezier(.2,.9,.3,1)}
 .toast.on{transform:none}
-.note{font-size:12px;color:var(--dim);line-height:1.55;margin-top:10px}
-.note b{color:var(--txt);font-weight:600}
+#ar.on ~ .toast{display:none}
+
+/* ---------- responsive ---------- */
+@media (min-width:760px){
+  :root{--r:26px;--gap:22px}
+  .wrap{max-width:720px}
+  .opts{grid-template-columns:repeat(4,1fr)}
+  .setup{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  .trigger{--tw:132px}
+  .trigger.alt{display:block}
+  .bot{gap:18px}
+  .pills{flex-direction:row;align-items:center;margin:0 auto}
+  #feed{font-size:.68rem}
+}
+@media (max-height:460px){
+  .trigger{--tw:74px}
+  .hud{padding-top:8px}
+  #calbar,#feed{display:none}
+  .pills{flex-direction:row}
+}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 </style>
 </head>
@@ -201,12 +272,13 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 <div id="ar">
   <video id="cam" playsinline muted autoplay></video>
   <canvas id="scan"></canvas>
+  <div id="vignette"></div>
   <div id="fx"></div>
   <div id="ret">
-    <svg viewBox="0 0 112 112">
-      <path class="brk" d="M6 34V6h28M78 6h28v28M106 78v28H78M34 106H6V78"/>
-      <circle class="dot" cx="56" cy="56" r="3.5"/>
-      <path class="brk" d="M56 40v-9M56 81v-9M40 56h-9M81 56h-9" opacity=".5"/>
+    <svg viewBox="0 0 120 120">
+      <circle class="ring" cx="60" cy="60" r="30"/>
+      <path class="brk" d="M12 34V16a4 4 0 0 1 4-4h18M86 12h18a4 4 0 0 1 4 4v18M108 86v18a4 4 0 0 1-4 4H86M34 108H16a4 4 0 0 1-4-4V86"/>
+      <circle class="dot" cx="60" cy="60" r="3.5"/>
     </svg>
   </div>
   <div id="lockName">—</div>
@@ -216,115 +288,135 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 
   <div class="hud">
     <div class="top">
-      <div class="plate hp">
-        <div class="lbl"><span id="meName">PEMAIN</span><span id="hpTxt">100</span></div>
+      <div class="glass hp">
+        <div class="lbl"><span id="meName">PEMAIN</span><b id="hpTxt">100</b></div>
         <div class="hpbar"><i id="hpFill"></i></div>
       </div>
-      <div class="plate" id="score">memuat…</div>
+      <div class="glass" id="score">memuat…</div>
     </div>
     <div class="mid">
-      <div>
-        <div id="feed"></div>
-        <div id="diag" class="plate" style="margin-top:8px;font-family:'Azeret Mono',monospace;font-size:10px;line-height:1.7;letter-spacing:.06em;color:var(--dim)"></div>
-      </div>
-      <canvas id="radar" width="192" height="192" hidden></canvas>
+      <div id="feed"></div>
+      <canvas id="radar" width="208" height="208" hidden></canvas>
     </div>
     <div id="calbar" hidden></div>
-    <div class="plate" id="diag" hidden></div>
+    <div class="glass" id="diag" hidden></div>
     <div class="bot">
-      <div id="ammo">12<small>/12</small></div>
-      <button class="mini" id="btnCal" hidden>KALIBRASI</button>
-      <button class="mini" id="btnReload">ISI ULANG</button>
-      <button class="mini" id="btnQuit">KELUAR</button>
-      <button class="fire" id="btnFire">TEMBAK</button>
+      <div class="trigger alt">
+        <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44"/>
+          <circle class="fill ammoRing" cx="50" cy="50" r="44"/></svg>
+        <button class="fire" id="btnFire2"><span class="ammoText">12<small>PELURU</small></span></button>
+      </div>
+      <div class="pills">
+        <button class="mini" id="btnReload">Isi ulang</button>
+        <button class="mini" id="btnQuit">Keluar</button>
+      </div>
+      <div class="trigger">
+        <svg viewBox="0 0 100 100">
+          <defs><linearGradient id="gtrig" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7DF9D9"/><stop offset=".5" stop-color="#8FB8FF"/>
+            <stop offset="1" stop-color="#C6A6FF"/></linearGradient></defs>
+          <circle class="track" cx="50" cy="50" r="44"/>
+          <circle class="fill ammoRing" cx="50" cy="50" r="44"/></svg>
+        <button class="fire" id="btnFire"><span class="ammoText" id="ammo">12<small>PELURU</small></span></button>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ===================== BOOT ===================== -->
 <section class="screen on" id="s-boot">
-  <div class="hazard"></div>
-  <div class="scroll">
-    <p class="eyebrow">Laser tag · WebXR / kamera</p>
-    <h1>Tanda<em>Arena</em></h1>
-    <p class="lede">Satu file HTML. Buka di HP, semua orang gabung pakai kode arena, lalu saling bidik lewat kamera. Tidak ada server game — HP-nya ngobrol langsung (P2P).</p>
+  <div class="aura"></div>
+  <div class="scroll"><div class="wrap">
+    <div class="hero">
+      <span class="kicker"><i></i>Laser tag lewat kamera</span>
+      <h1>Tanda<em>Arena</em></h1>
+      <p class="lede">Satu tautan, dibuka di HP masing-masing. Buat arena, sebutkan kodenya, lalu saling bidik lewat kamera. Tidak ada server game di tengah — HP-nya ngobrol langsung.</p>
+    </div>
 
-    <div class="card clip">
-      <h3>Cara deteksi tembakan</h3>
-      <div class="opts" id="modePick">
-        <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>DALAM RUANGAN. Pakai pita warna.</span></button>
-        <button class="opt" data-mode="body" aria-pressed="false"><b>Badan</b><span>Lacak kerangka + wajah. Unduh model ~9 MB.</span></button>
-        <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>LUAR saja. GPS, jarak min. 10 m.</span></button>
-        <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Target melayang.</span></button>
+    <div class="setup">
+      <div class="pane">
+        <h3>Cara menandai lawan</h3>
+        <div class="opts" id="modePick">
+          <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>Dalam ruangan. Warna terang.</span></button>
+          <button class="opt" data-mode="body" aria-pressed="false"><b>Badan</b><span>Lacak orang. Unduh model.</span></button>
+          <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>Luar saja. GPS.</span></button>
+          <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Drone.</span></button>
+        </div>
+        <p class="note" id="modeNote"></p>
       </div>
-      <p class="note" id="modeNote"></p>
+
+      <div class="pane">
+        <h3>Identitasmu</h3>
+        <label class="f" for="inName">Nama panggilan</label>
+        <input id="inName" maxlength="10" placeholder="KAMU">
+        <label class="f" style="margin-top:16px">Tanda warna</label>
+        <div class="bands" id="bandPick"></div>
+        <p class="note">Cuma label identitas — kamu tidak harus punya persis warna ini. Pakai benda apa pun yang terang dan berbeda dari pemain lain, nanti warnanya disampel di dalam ronde.</p>
+      </div>
     </div>
 
-    <div class="card clip">
-      <label class="f" for="inName">Nama panggilan</label>
-      <input id="inName" maxlength="10" placeholder="KAMU">
-      <label class="f">Tanda warna kamu</label>
-      <div class="bands" id="bandPick"></div>
-      <p class="note">Ini cuma <b>label identitas</b> — kamu nggak harus punya persis warna ini. Pakai benda apa pun yang warnanya ngejreng dan beda dari yang lain (handuk, tas, kaos, tutup botol), lalu di dalam ronde lawan tinggal tap chip namamu buat <b>menyampel warna aslinya</b>. Syaratnya cuma satu: <b>antar pemain jangan mirip</b>.</p>
+    <div class="stack">
+      <button class="btn" id="btnHost">Buka arena baru <span class="k">HOST</span></button>
+      <button class="btn ghost" id="btnJoinView">Gabung pakai kode <span class="k">JOIN</span></button>
+      <button class="btn" id="btnSolo" hidden>Mulai latihan <span class="k">SOLO</span></button>
     </div>
 
-    <button class="btn clip" id="btnHost">Buka arena baru <span class="k">HOST</span></button>
-    <button class="btn ghost clip" id="btnJoinView">Gabung pakai kode <span class="k">JOIN</span></button>
-    <button class="btn ghost clip" id="btnSolo" hidden>Mulai latihan <span class="k">SOLO</span></button>
-
-    <div class="card clip" id="joinBox" hidden>
+    <div class="pane" id="joinBox" hidden>
       <label class="f" for="inCode">Kode arena</label>
       <input id="inCode" maxlength="4" placeholder="A7K2" autocomplete="off">
-      <button class="btn clip" id="btnJoin" style="margin-top:12px">Masuk arena</button>
+      <button class="btn" id="btnJoin" style="margin-top:14px">Masuk arena</button>
     </div>
 
-    <p class="note" style="margin-top:22px">Butuh HTTPS + izin kamera. iPhone: Safari akan minta izin gerak/kompas saat mulai.</p>
-  </div>
-  <div class="hazard thin"></div>
+    <p class="note">Perlu HTTPS dan izin kamera. Di iPhone, Safari akan menanyakan izin gerak saat ronde dimulai.</p>
+  </div></div>
 </section>
 
 <!-- ===================== LOBBY ===================== -->
 <section class="screen" id="s-lobby">
-  <div class="hazard"></div>
-  <div class="scroll">
-    <p class="eyebrow">Ruang tunggu</p>
-    <div style="margin:18px 0 6px"><span class="code" id="lobbyCode">····</span></div>
-    <p class="lede" id="lobbyHint">Sebutkan kode ini ke teman-temanmu.</p>
-    <div class="card clip">
-      <h3>Pemain <span id="pcount"></span></h3>
-      <div id="roster"></div>
+  <div class="aura"></div>
+  <div class="scroll"><div class="wrap">
+    <div class="hero">
+      <span class="kicker"><i></i>Ruang tunggu</span>
+      <div class="code" id="lobbyCode">····</div>
+      <p class="lede" id="lobbyHint" style="margin-top:14px">Sebutkan kode ini ke teman-temanmu.</p>
     </div>
-    <div class="card clip">
-      <h3>Mode ronde</h3>
-      <div class="row" style="border:0"><span class="nm" id="lobbyMode">—</span></div>
-      <p class="note" id="lobbyModeNote" style="margin:0"></p>
+    <div class="setup">
+      <div class="pane">
+        <h3>Pemain <span id="pcount"></span></h3>
+        <div id="roster"></div>
+      </div>
+      <div class="pane">
+        <h3>Aturan ronde</h3>
+        <div class="row"><span class="nm">Nyawa</span><span class="st">100 · tembakan 25</span></div>
+        <div class="row"><span class="nm">Kena kepala</span><span class="st">50 · dobel</span></div>
+        <div class="row"><span class="nm">Peluru</span><span class="st">12 · isi ulang 1,6 dtk</span></div>
+        <div class="row"><span class="nm">Respawn</span><span class="st">5 detik</span></div>
+        <div class="row"><span class="nm">Ronde selesai</span><span class="st">10 tag</span></div>
+      </div>
     </div>
-    <div class="card clip">
-      <h3>Aturan ronde</h3>
-      <div class="row"><span class="nm">Nyawa</span><span class="st">100 · tembakan 25</span></div>
-      <div class="row"><span class="nm">Peluru</span><span class="st">12 · isi ulang 1,6 dtk</span></div>
-      <div class="row"><span class="nm">Respawn</span><span class="st">5 detik</span></div>
-      <div class="row" style="border:0"><span class="nm">Ronde selesai</span><span class="st">10 tag</span></div>
+    <div class="stack">
+      <button class="btn" id="btnStart">Mulai ronde</button>
+      <button class="btn ghost" id="btnLeave">Batal</button>
     </div>
-    <button class="btn clip" id="btnStart">Mulai ronde</button>
-    <button class="btn ghost clip" id="btnLeave">Batal</button>
     <p class="note" id="netNote"></p>
-  </div>
-  <div class="hazard thin"></div>
+  </div></div>
 </section>
 
 <!-- ===================== END ===================== -->
 <section class="screen" id="s-end">
-  <div class="hazard"></div>
-  <div class="scroll">
-    <p class="eyebrow">Ronde selesai</p>
-    <h1 id="endTitle">Hasil</h1>
-    <div class="card clip"><div id="endBoard"></div></div>
-    <button class="btn clip" id="btnAgain">Main lagi</button>
-    <button class="btn ghost clip" id="btnLobby">Kembali ke ruang tunggu</button>
-    <button class="btn ghost clip" id="btnHome">Kembali</button>
-  </div>
-  <div class="hazard thin"></div>
+  <div class="aura"></div>
+  <div class="scroll"><div class="wrap">
+    <div class="hero">
+      <span class="kicker"><i></i>Ronde selesai</span>
+      <h1 id="endTitle">Hasil</h1>
+    </div>
+    <div class="pane"><div id="endBoard"></div></div>
+    <div class="stack">
+      <button class="btn" id="btnAgain">Main lagi</button>
+      <button class="btn ghost" id="btnLobby">Kembali ke ruang tunggu</button>
+      <button class="btn ghost" id="btnHome">Keluar arena</button>
+    </div>
+  </div></div>
 </section>
 
 <div class="toast" id="toast"></div>
@@ -426,7 +518,7 @@ $('#modePick').addEventListener('click', e=>{
 });
 BANDS.forEach((b,i)=>{
   const el=document.createElement('button');
-  el.className='band'; el.style.background=b.hex; el.textContent=b.nm;
+  el.className='band'; el.style.background=b.hex; el.innerHTML=`<b>${b.nm}</b>`;
   el.setAttribute('aria-pressed', String(i===0)); el.dataset.k=b.k;
   el.onclick=()=>{ $$('#bandPick .band').forEach(x=>x.setAttribute('aria-pressed',String(x===el)));
     S.me.band=b.k; paintRoster(); };
@@ -477,7 +569,7 @@ function paintRoster(){
   const list = S.players.size ? [...S.players.values()] : [S.me];
   $('#pcount').textContent = `${list.length}/4`;
   $('#roster').innerHTML = list.map(p=>`<div class="row">
-      <span class="chip" style="background:${bandOf(p.band).hex}"></span>
+      <span class="chip" style="background:${bandOf(p.band).hex};color:${bandOf(p.band).hex}"></span>
       <span class="nm">${p.name}${p.id===S.me.id?' · kamu':''}</span>
       <span class="st">${bandOf(p.band).nm}</span></div>`).join('');
   $('#btnStart').hidden = !S.isHost;
@@ -567,10 +659,17 @@ function paintHP(){
   $('#hpTxt').textContent=hp;
   const f=$('#hpFill'); f.style.width=hp+'%'; f.classList.toggle('low', hp<=40);
 }
+const RING=2*Math.PI*44;
 function paintAmmo(){
-  const a=$('#ammo');
-  a.innerHTML = (S.reloading?'··':S.ammo)+`<small>/${CFG.mag}</small>`;
-  a.classList.toggle('empty', S.ammo===0 && !S.reloading);
+  const frac = S.reloading ? 0 : S.ammo/CFG.mag;
+  $$('.ammoRing').forEach(r=>{
+    r.style.strokeDasharray=RING;
+    r.style.strokeDashoffset=RING*(1-frac);
+  });
+  $$('.ammoText').forEach(a=>{
+    a.innerHTML = (S.reloading?'···':S.ammo)+`<small>${S.reloading?'ISI ULANG':'PELURU'}</small>`;
+    a.classList.toggle('empty', S.ammo===0 && !S.reloading);
+  });
 }
 function paintScore(){
   const list=[...S.players.values()].sort((a,b)=>(b.kills||0)-(a.kills||0)).slice(0,4);
@@ -1208,14 +1307,36 @@ function endRound(){
   $('#endTitle').innerHTML = list[0] && list[0].id===S.me.id ? 'Kamu<em>menang</em>' : 'Hasil<em>ronde</em>';
   $('#endBoard').innerHTML = list.map((p,i)=>`<div class="row">
       <span class="st">${String(i+1).padStart(2,'0')}</span>
-      <span class="chip" style="background:${bandOf(p.band).hex}"></span>
+      <span class="chip" style="background:${bandOf(p.band).hex};color:${bandOf(p.band).hex}"></span>
       <span class="nm">${p.name}</span>
       <span class="st">${p.kills||0} tag · ${p.deaths||0} kena</span></div>`).join('');
   show('s-end');
 }
 
+/* ---------------- spatial parallax ----------------
+   Panels shift a few px against the camera feed as the device tilts, so the
+   HUD reads as glass floating in front of the room rather than stickers. */
+(function(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let bx=0, by=0, tx=0, ty=0, on=false;
+  addEventListener('deviceorientation', e=>{
+    if(e.beta==null) return;
+    tx = Math.max(-1, Math.min(1, (e.gamma||0)/34));
+    ty = Math.max(-1, Math.min(1, ((e.beta||0)-45)/40));
+    if(!on){ on=true; step(); }
+  }, true);
+  function step(){
+    bx += (tx-bx)*.08; by += (ty-by)*.08;
+    const hud=document.querySelector('.hud');
+    if(hud) hud.style.transform=`translate3d(${(-bx*7).toFixed(2)}px,${(-by*5).toFixed(2)}px,0)`;
+    const fx=$('#fx');
+    if(fx) fx.style.transform=`translate3d(${(bx*3).toFixed(2)}px,${(by*2).toFixed(2)}px,0)`;
+    requestAnimationFrame(step);
+  }
+})();
+
 /* ---------------- input ---------------- */
-$('#btnFire').addEventListener('pointerdown', e=>{ e.preventDefault(); fire(); });
+$$('.fire').forEach(b=>b.addEventListener('pointerdown', e=>{ e.preventDefault(); fire(); }));
 $('#btnReload').onclick = reload;
 $('#btnQuit').onclick = ()=>{ endRound(); };
 $('#ar').addEventListener('pointerdown', e=>{ if(e.target.closest('.hud')) return; fire(); });
@@ -1224,5 +1345,4 @@ window.addEventListener('keydown', e=>{ if(!S.started) return;
 paintRoster();
 
 </script>
-</body>
-</html>
+</body></html>
