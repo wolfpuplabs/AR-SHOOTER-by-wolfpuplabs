@@ -21,6 +21,7 @@
   --lift:0 20px 44px -24px rgba(0,0,0,.95), 0 2px 10px -6px rgba(0,0,0,.7);
   --gap:clamp(10px,2.6vw,16px);
 }
+[hidden]{display:none !important}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 html,body{height:100svh;overflow:hidden;background:var(--bg);color:var(--ink);
   font-family:'Instrument Sans',system-ui,sans-serif;overscroll-behavior:none;
@@ -386,6 +387,11 @@ input:focus{border-color:var(--peri);outline:none}
         <div id="roster"></div>
       </div>
       <div class="pane">
+        <h3>Mode ronde</h3>
+        <div class="row"><span class="nm" id="lobbyMode">—</span></div>
+        <p class="note" id="lobbyModeNote"></p>
+      </div>
+      <div class="pane">
         <h3>Aturan ronde</h3>
         <div class="row"><span class="nm">Nyawa</span><span class="st">100 · tembakan 25</span></div>
         <div class="row"><span class="nm">Kena kepala</span><span class="st">50 · dobel</span></div>
@@ -500,6 +506,16 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport
   visualViewport.addEventListener('scroll', fitViewport); }
 const view = () => ({ w:$('#ar').clientWidth||innerWidth, h:$('#ar').clientHeight||innerHeight });
 
+/* Nothing here has a console attached on a phone, so failures must announce
+   themselves on screen or they look like "the button does nothing". */
+addEventListener('error', e=>{
+  const m=(e.message||'error')+(e.lineno?` @${e.lineno}`:'');
+  try{ toast('Galat: '+m, 8000); }catch(_){}
+});
+addEventListener('unhandledrejection', e=>{
+  try{ toast('Galat async: '+((e.reason&&e.reason.message)||e.reason), 8000); }catch(_){}
+});
+
 /* ---------------- boot UI ---------------- */
 const MODE_NOTE = {
   band:'Untuk main di dalam ruangan. Tiap orang pakai benda warna beda; bidik sampai bracket merah, lalu tembak. Bisa sampel warna aslinya di tengah ronde.',
@@ -561,9 +577,10 @@ $('#btnLobby').onclick = ()=> show(S.mode==='solo' ? 's-boot' : 's-lobby');
 
 /* ---------------- roster ---------------- */
 function paintLobbyMode(){
-  const nm={band:'PITA WARNA',field:'LAPANGAN (GPS)',solo:'LATIHAN'}[S.mode];
-  $('#lobbyMode').textContent = nm + (S.isHost?'' : ' · ditentukan host');
-  $('#lobbyModeNote').textContent = MODE_NOTE[S.mode];
+  const nm={band:'PITA WARNA',body:'BADAN + KEPALA',field:'LAPANGAN (GPS)',solo:'LATIHAN'}[S.mode]||S.mode;
+  const a=$('#lobbyMode'), b=$('#lobbyModeNote');
+  if(a) a.textContent = nm + (S.isHost?'' : ' · ditentukan host');
+  if(b) b.textContent = MODE_NOTE[S.mode]||'';
 }
 function paintRoster(){
   const list = S.players.size ? [...S.players.values()] : [S.me];
@@ -582,6 +599,7 @@ function paintRoster(){
 const net = {
   peer:null, conns:[], up:null,
   host(){
+   try{
     S.isHost=true; S.code=codeGen();
     S.me.id='H'+S.code;
     S.players.clear(); S.players.set(S.me.id, S.me);
@@ -597,8 +615,10 @@ const net = {
         if(c.meta){ S.players.delete(c.meta); paintRoster();
           this.send({t:'roster', list:[...S.players.values()].map(pub)}); } });
     });
+   }catch(e){ show('s-boot'); toast('Gagal membuka arena: '+(e.message||e), 8000); }
   },
   join(code){
+   try{
     S.isHost=false; S.code=code; S.me.id='P'+Math.random().toString(36).slice(2,7).toUpperCase();
     $('#lobbyCode').textContent=code; paintLobbyMode(); show('s-lobby');
     $('#netNote').textContent='Mencari arena…';
@@ -611,6 +631,7 @@ const net = {
       this.up.on('close', ()=>{ toast('Sambungan ke host putus.'); });
     });
     this.peer.on('error', e=> $('#netNote').textContent='Gagal: '+e.type+' — pastikan kode benar & host masih online.');
+   }catch(e){ show('s-boot'); toast('Gagal masuk arena: '+(e.message||e), 8000); }
   },
   relay(d, from){ this.conns.forEach(c=>{ if(c!==from && c.open) c.send(d); }); },
   send(d){ if(S.isHost) this.relay(d,null); else if(this.up && this.up.open) this.up.send(d); },
@@ -1317,7 +1338,7 @@ function endRound(){
    Panels shift a few px against the camera feed as the device tilts, so the
    HUD reads as glass floating in front of the room rather than stickers. */
 (function(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   let bx=0, by=0, tx=0, ty=0, on=false;
   addEventListener('deviceorientation', e=>{
     if(e.beta==null) return;
