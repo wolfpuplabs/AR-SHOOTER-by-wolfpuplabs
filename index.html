@@ -253,7 +253,7 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
       <h3>Cara deteksi tembakan</h3>
       <div class="opts" id="modePick">
         <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>DALAM RUANGAN. Pakai pita warna.</span></button>
-        <button class="opt" data-mode="body" aria-pressed="false"><b>Badan</b><span>Lacak kerangka + wajah. Unduh model ~6 MB.</span></button>
+        <button class="opt" data-mode="body" aria-pressed="false"><b>Badan</b><span>Lacak kerangka + wajah. Unduh model ~9 MB.</span></button>
         <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>LUAR saja. GPS, jarak min. 10 m.</span></button>
         <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Target melayang.</span></button>
       </div>
@@ -412,7 +412,7 @@ const view = () => ({ w:$('#ar').clientWidth||innerWidth, h:$('#ar').clientHeigh
 const MODE_NOTE = {
   band:'Untuk main di dalam ruangan. Tiap orang pakai benda warna beda; bidik sampai bracket merah, lalu tembak. Bisa sampel warna aslinya di tengah ronde.',
   field:'Cuma jalan di LUAR RUANGAN. GPS nggak dapat sinyal di dalam rumah, dan pemain harus berpencar minimal 10 m — kalau berdekatan, arah antar-pemain cuma jadi angka acak.',
-  body:'MoveNet melacak kerangka (badan + kepala dari segala arah) dan BlazeFace mempertajam kotak kepala saat wajah menghadapmu. Kepala nongol doang tetap bisa ditembak, dan kena kepala = damage dobel.  Detail: yang dilacak badan lawan, bukan warna. Warna baju cuma dipakai buat membedakan siapa. Sekali unduh model ~6 MB, butuh internet di awal ronde.',
+  body:'MediaPipe melacak kerangka (badan + kepala dari segala arah) dan detektor wajah mempertajam kotak kepala saat wajah menghadapmu. Kepala nongol doang tetap bisa ditembak, dan kena kepala = damage dobel.  Detail: yang dilacak badan lawan, bukan warna. Warna baju cuma dipakai buat membedakan siapa. Sekali unduh model ~6 MB, butuh internet di awal ronde.',
   solo:'Tanpa teman, tanpa jaringan. Drone target melayang di layar buat kalibrasi rasa tembakannya.'
 };
 $('#modeNote').textContent = MODE_NOTE.band;
@@ -819,8 +819,9 @@ function paintDiag(){
       L.push(`${p.name}: ${distM(S.pos,p).toFixed(0)}m  off ${angDiff(bearing(S.pos,p),S.heading).toFixed(0)}°`);
     }
   } else if(S.mode==='body'){
-    L.push(AI.ready ? `${AI.ms}ms/pass · ${AI.boxes.length} badan · ${AI.heads.length} kepala`
-                    : ('model belum siap '+(AI.err?'· '+AI.err.slice(0,40):'')));
+    L.push(AI.ready ? `${AI.ms}ms/pass (${AI.gpu?'GPU':'CPU'}) · ${AI.boxes.length} badan · ${AI.heads.length} kepala`
+                    : ('model belum siap '+(AI.err?'· '+AI.err.slice(0,44):'')));
+    if(AI.ready && AI.err) L.push('err: '+AI.err.slice(0,44));
     const src=AI.heads.map(h=>h.src).join(',');
     if(src) L.push('sumber kepala: '+src);
     L.push('tap chip = sampel baju orang di crosshair');
@@ -841,26 +842,35 @@ $('#score').addEventListener('click', ()=>{ S.diag=!S.diag; paintDiag(); });
      3. torso box  — last resort anchor above the shoulders
    MoveNet replaces coco-ssd entirely: one model now yields body *and* head. */
 const AI={ ready:false, pose:null, face:null, busy:false, boxes:[], heads:[],
-           t:0, ms:0, last:0, err:'' };
+           t:0, ms:0, last:0, ts:0, err:'', gpu:true };
 const det=document.createElement('canvas'); det.width=320; det.height=240;
 const dctx=det.getContext('2d',{willReadFrequently:true});
 const smooth=new Map();
 
-function loadScript(src){ return new Promise((res,rej)=>{
-  const el=document.createElement('script'); el.src=src; el.onload=res; el.onerror=rej; document.head.append(el); }); }
+const MP_VER='1.0.1';
+const MP_POSE='https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const MP_FACE='https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
 
+/* TF.js was the wrong horse: its models still resolve through tfhub.dev, which
+   now redirects to Kaggle with no CORS header, so the browser blocks the
+   download. MediaPipe serves its own weights with CORS intact. */
 async function loadDetector(){
   if(AI.ready) return true;
-  try{
-    if(!window.tf) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
-    if(!window.poseDetection) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js');
-    if(!window.blazeface) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.js');
-    AI.pose = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
-      modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
-      enableSmoothing: true, enableTracking: true, trackerType: 'boundingBox' });
-    AI.face = await blazeface.load({maxFaces:4});
-    AI.ready=true; return true;
-  }catch(e){ AI.err = e && e.message ? e.message : String(e); return false; }
+  for(const delegate of ['GPU','CPU']){
+    try{
+      const V = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`);
+      const fs = await V.FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`);
+      AI.pose = await V.PoseLandmarker.createFromOptions(fs, {
+        baseOptions:{ modelAssetPath:MP_POSE, delegate },
+        runningMode:'VIDEO', numPoses:4,
+        minPoseDetectionConfidence:.4, minPosePresenceConfidence:.4, minTrackingConfidence:.4 });
+      AI.face = await V.FaceDetector.createFromOptions(fs, {
+        baseOptions:{ modelAssetPath:MP_FACE, delegate },
+        runningMode:'VIDEO', minDetectionConfidence:.5 });
+      AI.gpu = delegate==='GPU'; AI.ready=true; AI.err=''; return true;
+    }catch(e){ AI.err = (e && e.message ? e.message : String(e)).slice(0,120); }
+  }
+  return false;
 }
 
 const clamp01=(v)=>Math.max(0,Math.min(1,v));
@@ -888,7 +898,7 @@ function matchPlayer(c, tol=42){
     if(d<tol && (!best||d<best.d)) best={p,d};
   }
   if(best) return best.p;
-  return foes.length===1 ? foes[0] : null;   // one opponent: nothing to confuse it with
+  return foes.length===1 ? foes[0] : null;
 }
 function toScreen(nb){
   const [x0,y0]=videoToScreen(nb.x, nb.y), [x1,y1]=videoToScreen(nb.x+nb.w, nb.y+nb.h);
@@ -910,30 +920,35 @@ async function runDetect(){
   AI.busy=true;
   const t0=now();
   try{
+    // keep the analysis canvas at the camera's aspect ratio, or every box skews
+    const want=Math.round(320*v.videoHeight/v.videoWidth);
+    if(det.height!==want){ det.height=want; }
     dctx.drawImage(v,0,0,det.width,det.height);
-    const poses = await AI.pose.estimatePoses(det, {maxPoses:4, flipHorizontal:false});
-    const faces = await AI.face.estimateFaces(det, false);
-    const DW=det.width, DH=det.height, bodies=[], heads=[];
+    const DW=det.width, DH=det.height;
+    const ts = AI.ts = Math.max(AI.ts+1, Math.round(now()));
 
-    poses.forEach((ps, pi)=>{
-      const k={}; ps.keypoints.forEach(p=>{ k[p.name]=p; });
-      const ok=ps.keypoints.filter(p=>p.score>0.3);
-      if(ok.length<4) return;
+    const pr = AI.pose.detectForVideo(det, ts);
+    const fr = AI.face.detectForVideo(det, ts);
+    const bodies=[], heads=[];
+
+    (pr.landmarks||[]).forEach((L, pi)=>{
+      const P = i => L[i] ? { x:L[i].x*DW, y:L[i].y*DH, s:(L[i].visibility==null?1:L[i].visibility) } : null;
+      const ok = L.map((_,i)=>P(i)).filter(p=>p && p.s>0.35);
+      if(ok.length<5) return;
       const xs=ok.map(p=>p.x), ys=ok.map(p=>p.y);
       const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
-      const px=(x1-x0)*0.14, py=(y1-y0)*0.08;
+      const px=(x1-x0)*0.12, py=(y1-y0)*0.06;
       const bnb={ x:(x0-px)/DW, y:(y0-py)/DH, w:(x1-x0+px*2)/DW, h:(y1-y0+py*2)/DH };
 
-      const ls=k.left_shoulder, rs=k.right_shoulder, lh=k.left_hip, rh=k.right_hip;
-      const sOK = ls&&rs&&ls.score>0.3&&rs.score>0.3;
+      const ls=P(11), rs=P(12), lh=P(23), rh=P(24);          // shoulders, hips
+      const sOK = ls&&rs&&ls.s>0.35&&rs.s>0.35;
       const shoulderW = sOK ? Math.hypot(ls.x-rs.x, ls.y-rs.y) : 0;
 
-      // identity from the shirt: the quad bounded by shoulders and hips
       let who=null;
-      if(sOK){
+      if(sOK && shoulderW>6){
         const midx=(ls.x+rs.x)/2, topy=(ls.y+rs.y)/2;
-        const boty = (lh&&rh&&lh.score>0.3&&rh.score>0.3) ? (lh.y+rh.y)/2 : topy+shoulderW*1.1;
-        who = matchPlayer(meanHS((midx-shoulderW*0.28)/DW, (topy+ (boty-topy)*0.15)/DH,
+        const boty = (lh&&rh&&lh.s>0.35&&rh.s>0.35) ? (lh.y+rh.y)/2 : topy+shoulderW*1.1;
+        who = matchPlayer(meanHS((midx-shoulderW*0.28)/DW, (topy+(boty-topy)*0.15)/DH,
                                  (shoulderW*0.56)/DW, ((boty-topy)*0.55)/DH));
       }
       if(!who) who = matchPlayer(meanHS(bnb.x+bnb.w*0.3, bnb.y+bnb.h*0.2, bnb.w*0.4, bnb.h*0.25));
@@ -941,45 +956,40 @@ async function runDetect(){
       const body=toScreen(bnb); body.p=who; body.src='pose';
       bodies.push(ease('b'+(who?who.id:'x'+pi), body));
 
-      // --- head, degrading gracefully as the face turns away
-      const fk=['nose','left_eye','right_eye','left_ear','right_ear'].map(n=>k[n]).filter(p=>p&&p.score>0.3);
+      const fk=[0,2,5,7,8].map(P).filter(p=>p&&p.s>0.35);     // nose, eyes, ears
       let hc=null, hw=0;
       if(fk.length>=2){
         hc={ x:fk.reduce((s,p)=>s+p.x,0)/fk.length, y:fk.reduce((s,p)=>s+p.y,0)/fk.length };
-        const ears = (k.left_ear&&k.right_ear&&k.left_ear.score>0.3&&k.right_ear.score>0.3)
-          ? Math.hypot(k.left_ear.x-k.right_ear.x, k.left_ear.y-k.right_ear.y) : 0;
-        hw = Math.max(ears*1.9, shoulderW*0.62, 22);
+        const le=P(7), re=P(8);
+        const ears = (le&&re&&le.s>0.35&&re.s>0.35) ? Math.hypot(le.x-re.x, le.y-re.y) : 0;
+        hw = Math.max(ears*1.9, shoulderW*0.62, 20);
       } else if(sOK){
-        // turned away: no facial keypoints survive, so anchor above the shoulders
         hc={ x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 - shoulderW*0.62 };
         hw = shoulderW*0.68;
       }
-      if(hc){
+      if(hc && hw>6){
         const hnb={ x:(hc.x-hw/2)/DW, y:(hc.y-hw*0.62)/DH, w:hw/DW, h:(hw*1.18)/DH };
         const head=toScreen(hnb); head.p=who; head.src=fk.length>=2?'kp':'est';
         heads.push(ease('h'+(who?who.id:'x'+pi), head));
       }
     });
 
-    // BlazeFace sharpens a head we already have, or stands alone if MoveNet missed the pose
-    faces.forEach((f,fi)=>{
-      const score=Array.isArray(f.probability)?f.probability[0]:f.probability;
-      if(score<0.75) return;
-      const [fx0,fy0]=f.topLeft, [fx1,fy1]=f.bottomRight;
-      const cx=(fx0+fx1)/2, cy=(fy0+fy1)/2;
-      const w=(fx1-fx0)*1.45, h=(fy1-fy0)*1.65;
-      const nb={ x:(cx-w/2)/DW, y:(cy-h/2-h*0.06)/DH, w:w/DW, h:h/DH };
+    (fr.detections||[]).forEach((f, fi)=>{
+      const bb=f.boundingBox; if(!bb) return;
+      const cx=bb.originX+bb.width/2, cy=bb.originY+bb.height/2;
+      const w=bb.width*1.35, h=bb.height*1.5;
+      const nb={ x:(cx-w/2)/DW, y:(cy-h/2-h*0.05)/DH, w:w/DW, h:h/DH };
+      const near=heads.find(hd => cx/DW>hd.nb.x && cx/DW<hd.nb.x+hd.nb.w
+                               && cy/DH>hd.nb.y && cy/DH<hd.nb.y+hd.nb.h);
       const box=toScreen(nb);
-      const near=heads.find(hd => cx/DW > hd.nb.x && cx/DW < hd.nb.x+hd.nb.w
-                               && cy/DH > hd.nb.y && cy/DH < hd.nb.y+hd.nb.h);
       if(near){ near.x=box.x; near.y=box.y; near.w=box.w; near.h=box.h; near.nb=nb; near.src='face'; return; }
-      let who = matchPlayer(meanHS(nb.x, nb.y+nb.h*1.05, nb.w, nb.h*0.55), 38);  // collar strip
-      box.p=who; box.src='face';
-      heads.push(ease('f'+(who?who.id:'x'+fi), box));
+      box.p = matchPlayer(meanHS(nb.x, nb.y+nb.h*1.05, nb.w, nb.h*0.55), 38);
+      box.src='face';
+      heads.push(ease('f'+(box.p?box.p.id:'x'+fi), box));
     });
 
     AI.boxes=bodies; AI.heads=heads; AI.t=now(); AI.ms=Math.round(now()-t0);
-  }catch(e){ AI.err = e && e.message ? e.message : String(e); }
+  }catch(e){ AI.err = (e && e.message ? e.message : String(e)).slice(0,120); }
   AI.busy=false;
 }
 
@@ -1182,7 +1192,9 @@ async function startRound(){
   if(S.mode==='body'){
     banner('MEMUAT MODEL','sekali unduh, ±6 MB', true);
     const ok=await loadDetector();
-    if(!ok){ S.mode='band'; toast('Model gagal diunduh — balik ke mode Pita.', 5000); }
+    if(!ok){ S.mode='band';
+      toast('Model gagal dimuat, balik ke mode Pita. '+(AI.err||'cek koneksi'), 7000);
+      feed(`<b>AI: ${AI.err||'gagal memuat'}</b>`); }
   }
   if(S.mode==='field') await startSensors();
   if(S.mode==='solo') spawnDrone();
