@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0C0D0B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>TANDA / AR Laser Tag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;600;700&family=Azeret+Mono:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C0D0B; --char:#14150F; --glass:rgba(10,11,8,.66);
+  --line:rgba(255,255,255,.18); --line2:rgba(255,255,255,.08);
+  --hz:#FFC400; --hz-d:#8A6A00;
+  --hit:#FF2D20; --ok:#A6FF00;
+  --txt:#F2F1E9; --dim:rgba(242,241,233,.55);
+  --c1:#00E0FF; --c2:#FF2F92; --c3:#A6FF00; --c4:#FF7A00;
+  --pad: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--txt);
+  font-family:'Bai Jamjuree',system-ui,sans-serif;overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--hz);outline-offset:2px}
+
+/* ---------- hazard motif: the structural signature ---------- */
+.hazard{height:10px;background:repeating-linear-gradient(115deg,var(--hz) 0 14px,var(--ink) 14px 28px);flex:none}
+.hazard.thin{height:5px;opacity:.85}
+.clip{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+
+/* ---------- screens ---------- */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;z-index:10}
+.screen.on{display:flex}
+.scroll{flex:1;overflow-y:auto;padding:22px 20px calc(28px + var(--pad));-webkit-overflow-scrolling:touch}
+
+.eyebrow{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--hz);display:flex;gap:10px;align-items:center}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--line2)}
+h1{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(38px,13vw,62px);
+  line-height:.92;letter-spacing:-.04em;margin:14px 0 6px;text-transform:uppercase}
+h1 em{font-style:normal;color:var(--hz);display:block}
+.lede{color:var(--dim);font-size:15px;line-height:1.5;max-width:44ch}
+
+.card{background:var(--char);border:1px solid var(--line2);padding:16px;margin-top:14px}
+.card h3{font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-family:'Azeret Mono',monospace;
+  color:var(--dim);font-weight:400;margin-bottom:12px}
+
+.btn{display:flex;align-items:center;gap:12px;width:100%;padding:17px 18px;margin-top:10px;
+  background:var(--hz);color:#0C0D0B;font-weight:700;font-size:17px;letter-spacing:.01em;
+  transition:transform .12s ease,filter .12s ease}
+.btn:active{transform:translateY(2px);filter:brightness(.92)}
+.btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn .k{font-family:'Azeret Mono',monospace;font-size:12px;opacity:.6;margin-left:auto}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+.opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.opt{padding:12px 8px;border:1px solid var(--line2);background:#0F100C;text-align:center}
+.opt b{display:block;font-size:14px;margin-bottom:3px}
+.opt span{font-size:11px;color:var(--dim);line-height:1.3;display:block}
+.opt[aria-pressed="true"]{border-color:var(--hz);background:rgba(255,196,0,.09)}
+.opt[aria-pressed="true"] b{color:var(--hz)}
+
+input{width:100%;padding:15px;background:#0F100C;border:1px solid var(--line);color:var(--txt);
+  font-family:'Azeret Mono',monospace;font-size:20px;letter-spacing:.2em;text-transform:uppercase}
+input::placeholder{color:rgba(242,241,233,.25);letter-spacing:.1em}
+label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
+  margin:14px 0 7px;font-family:'Azeret Mono',monospace}
+
+/* band picker */
+.bands{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.band{aspect-ratio:1;border:2px solid transparent;position:relative;display:grid;place-items:center;
+  font-family:'Azeret Mono',monospace;font-size:10px;color:rgba(0,0,0,.62);font-weight:700}
+.band[aria-pressed="true"]{border-color:var(--txt);box-shadow:0 0 0 3px rgba(0,0,0,.6) inset}
+.band[disabled]{opacity:.22}
+
+/* roster */
+.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line2)}
+.chip{width:16px;height:16px;flex:none;border-radius:2px}
+.row .nm{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .st{font-family:'Azeret Mono',monospace;font-size:12px;color:var(--dim)}
+.code{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(44px,17vw,74px);
+  letter-spacing:.14em;color:var(--hz);line-height:1}
+
+/* ---------- AR view ---------- */
+#ar{position:fixed;inset:0;background:#000;z-index:5;display:none}
+#ar.on{display:block}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#scan{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+#fx{position:absolute;inset:0;pointer-events:none}
+
+/* reticle — the signature element */
+#ret{position:absolute;left:50%;top:50%;width:112px;height:112px;margin:-56px 0 0 -56px;pointer-events:none;
+  transition:transform .14s cubic-bezier(.2,.9,.3,1)}
+#ret svg{width:100%;height:100%;overflow:visible}
+#ret .brk{stroke:var(--txt);stroke-width:2;fill:none;opacity:.75;transition:all .14s}
+#ret.lock{transform:scale(.82)}
+#ret.lock .brk{stroke:var(--hit);opacity:1;stroke-width:3}
+#ret .dot{fill:var(--hz)}
+#ret.fire .dot{fill:#fff}
+#lockName{position:absolute;left:50%;top:calc(50% + 66px);transform:translateX(-50%);
+  font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--hit);
+  text-transform:uppercase;opacity:0;transition:opacity .12s;white-space:nowrap}
+#ret.lock ~ #lockName{opacity:1}
+
+.mark{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;border:2px solid;pointer-events:none;
+  clip-path:polygon(0 0,34% 0,0 34%,0 0,100% 0,100% 34%,66% 0,100% 0,100% 100%,66% 100%,100% 66%,100% 100%,0 100%,0 66%,34% 100%,0 100%);
+  transition:left .09s linear,top .09s linear}
+
+/* HUD */
+.hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(14px + var(--pad))}
+.hud > *{pointer-events:auto}
+.top{display:flex;gap:10px;align-items:flex-start}
+.plate{background:var(--glass);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border:1px solid var(--line2);padding:9px 12px}
+.hp{flex:1;max-width:260px}
+.hp .lbl{display:flex;justify-content:space-between;font-family:'Azeret Mono',monospace;font-size:10px;
+  letter-spacing:.18em;color:var(--dim);margin-bottom:6px;text-transform:uppercase}
+.hpbar{height:7px;background:rgba(255,255,255,.12);overflow:hidden}
+.hpbar i{display:block;height:100%;width:100%;background:var(--ok);transition:width .2s,background .2s}
+.hpbar i.low{background:var(--hit)}
+#score{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.1em;line-height:1.7;margin-left:auto;text-align:right}
+#score b{color:var(--hz)}
+.mid{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+#feed{font-family:'Azeret Mono',monospace;font-size:11px;line-height:1.8;color:var(--dim);max-width:56%}
+#feed b{color:var(--txt)}
+#radar{width:96px;height:96px;background:var(--glass);border:1px solid var(--line2)}
+.bot{display:flex;align-items:center;gap:14px;margin-top:12px}
+#ammo{font-family:'Azeret Mono',monospace;font-weight:900;font-size:30px;letter-spacing:.02em;
+  text-shadow:0 2px 12px rgba(0,0,0,.8);line-height:1}
+#ammo small{font-size:13px;font-weight:400;color:var(--dim)}
+#ammo.empty{color:var(--hit)}
+.fire{width:88px;height:88px;border-radius:50%;margin-left:auto;background:rgba(255,196,0,.14);
+  border:2px solid var(--hz);color:var(--hz);font-family:'Azeret Mono',monospace;font-weight:900;
+  font-size:13px;letter-spacing:.12em;display:grid;place-items:center;transition:transform .07s,background .07s}
+.fire:active{transform:scale(.93);background:rgba(255,196,0,.34)}
+.mini{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.14em;padding:11px 13px;
+  background:var(--glass);border:1px solid var(--line2);text-transform:uppercase}
+
+/* full-screen feedback layers */
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(120% 90% at 50% 50%,transparent 42%,var(--hit) 100%)}
+#flash.on{animation:hurt .42s ease-out}
+@keyframes hurt{0%{opacity:.95}100%{opacity:0}}
+#muzzle{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(60% 40% at 50% 62%,rgba(255,255,255,.5),transparent 70%)}
+#muzzle.on{animation:mz .1s ease-out}
+@keyframes mz{0%{opacity:1}100%{opacity:0}}
+#banner{position:absolute;left:0;right:0;top:38%;text-align:center;pointer-events:none;opacity:0}
+#banner.on{animation:bn 1.5s ease-out}
+#banner b{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(30px,11vw,52px);
+  letter-spacing:-.02em;text-transform:uppercase;text-shadow:0 4px 20px #000}
+#banner span{display:block;font-family:'Azeret Mono',monospace;font-size:12px;letter-spacing:.3em;color:var(--dim)}
+@keyframes bn{0%{opacity:0;transform:scale(1.15)}18%{opacity:1;transform:scale(1)}72%{opacity:1}100%{opacity:0}}
+
+.toast{position:fixed;left:14px;right:14px;bottom:calc(18px + var(--pad));z-index:60;background:var(--hz);
+  color:#0C0D0B;padding:14px 16px;font-weight:600;font-size:14px;transform:translateY(140%);
+  transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+.toast.on{transform:none}
+.note{font-size:12px;color:var(--dim);line-height:1.55;margin-top:10px}
+.note b{color:var(--txt);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+
+<!-- ===================== AR LAYER ===================== -->
+<div id="ar">
+  <video id="cam" playsinline muted autoplay></video>
+  <canvas id="scan"></canvas>
+  <div id="fx"></div>
+  <div id="ret">
+    <svg viewBox="0 0 112 112">
+      <path class="brk" d="M6 34V6h28M78 6h28v28M106 78v28H78M34 106H6V78"/>
+      <circle class="dot" cx="56" cy="56" r="3.5"/>
+      <path class="brk" d="M56 40v-9M56 81v-9M40 56h-9M81 56h-9" opacity=".5"/>
+    </svg>
+  </div>
+  <div id="lockName">—</div>
+  <div id="muzzle"></div>
+  <div id="flash"></div>
+  <div id="banner"><b id="bnT">TERTEMBAK</b><span id="bnS">respawn 5</span></div>
+
+  <div class="hud">
+    <div class="top">
+      <div class="plate hp">
+        <div class="lbl"><span id="meName">PEMAIN</span><span id="hpTxt">100</span></div>
+        <div class="hpbar"><i id="hpFill"></i></div>
+      </div>
+      <div class="plate" id="score">memuat…</div>
+    </div>
+    <div class="mid">
+      <div id="feed"></div>
+      <canvas id="radar" width="192" height="192" hidden></canvas>
+    </div>
+    <div class="bot">
+      <div id="ammo">12<small>/12</small></div>
+      <button class="mini" id="btnReload">ISI ULANG</button>
+      <button class="mini" id="btnQuit">KELUAR</button>
+      <button class="fire" id="btnFire">TEMBAK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== BOOT ===================== -->
+<section class="screen on" id="s-boot">
+  <div class="hazard"></div>
+  <div class="scroll">
+    <p class="eyebrow">Laser tag · WebXR / kamera</p>
+    <h1>Tanda<em>Arena</em></h1>
+    <p class="lede">Satu file HTML. Buka di HP, semua orang gabung pakai kode arena, lalu saling bidik lewat kamera. Tidak ada server game — HP-nya ngobrol langsung (P2P).</p>
+
+    <div class="card clip">
+      <h3>Cara deteksi tembakan</h3>
+      <div class="opts" id="modePick">
+        <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>Dalam ruangan. Tiap orang pakai pita warna.</span></button>
+        <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>Outdoor. Pakai GPS + kompas.</span></button>
+        <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Target melayang.</span></button>
+      </div>
+      <p class="note" id="modeNote"></p>
+    </div>
+
+    <div class="card clip">
+      <label class="f" for="inName">Nama panggilan</label>
+      <input id="inName" maxlength="10" placeholder="KAMU">
+      <label class="f">Warna pita kamu</label>
+      <div class="bands" id="bandPick"></div>
+      <p class="note">Pakai pita, kaos, atau kertas warna ini di dada/topi. Lawan membidik warna itu, jadi <b>tiap orang harus beda warna</b>.</p>
+    </div>
+
+    <button class="btn clip" id="btnHost">Buka arena baru <span class="k">HOST</span></button>
+    <button class="btn ghost clip" id="btnJoinView">Gabung pakai kode <span class="k">JOIN</span></button>
+    <button class="btn ghost clip" id="btnSolo" hidden>Mulai latihan <span class="k">SOLO</span></button>
+
+    <div class="card clip" id="joinBox" hidden>
+      <label class="f" for="inCode">Kode arena</label>
+      <input id="inCode" maxlength="4" placeholder="A7K2" autocomplete="off">
+      <button class="btn clip" id="btnJoin" style="margin-top:12px">Masuk arena</button>
+    </div>
+
+    <p class="note" style="margin-top:22px">Butuh HTTPS + izin kamera. iPhone: Safari akan minta izin gerak/kompas saat mulai.</p>
+  </div>
+  <div class="hazard thin"></div>
+</section>
+
+<!-- ===================== LOBBY ===================== -->
+<section class="screen" id="s-lobby">
+  <div class="hazard"></div>
+  <div class="scroll">
+    <p class="eyebrow">Ruang tunggu</p>
+    <div style="margin:18px 0 6px"><span class="code" id="lobbyCode">····</span></div>
+    <p class="lede" id="lobbyHint">Sebutkan kode ini ke teman-temanmu.</p>
+    <div class="card clip">
+      <h3>Pemain <span id="pcount"></span></h3>
+      <div id="roster"></div>
+    </div>
+    <div class="card clip">
+      <h3>Aturan ronde</h3>
+      <div class="row"><span class="nm">Nyawa</span><span class="st">100 · tembakan 25</span></div>
+      <div class="row"><span class="nm">Peluru</span><span class="st">12 · isi ulang 1,6 dtk</span></div>
+      <div class="row"><span class="nm">Respawn</span><span class="st">5 detik</span></div>
+      <div class="row" style="border:0"><span class="nm">Ronde selesai</span><span class="st">10 tag</span></div>
+    </div>
+    <button class="btn clip" id="btnStart">Mulai ronde</button>
+    <button class="btn ghost clip" id="btnLeave">Batal</button>
+    <p class="note" id="netNote"></p>
+  </div>
+  <div class="hazard thin"></div>
+</section>
+
+<!-- ===================== END ===================== -->
+<section class="screen" id="s-end">
+  <div class="hazard"></div>
+  <div class="scroll">
+    <p class="eyebrow">Ronde selesai</p>
+    <h1 id="endTitle">Hasil</h1>
+    <div class="card clip"><div id="endBoard"></div></div>
+    <button class="btn clip" id="btnAgain">Main lagi</button>
+    <button class="btn ghost clip" id="btnHome">Kembali</button>
+  </div>
+  <div class="hazard thin"></div>
+</section>
+
+<div class="toast" id="toast"></div>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* ================= TANDA ARENA — AR laser tag =================
+   Single-file, P2P (WebRTC via PeerJS), camera passthrough AR.
+   Three hit-detection modes: band (color tracking), field (GPS+compass), solo.
+================================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const BANDS = [
+  { k:'c1', nm:'SIAN',    hex:'#00E0FF', hue:187, sat:.45 },
+  { k:'c2', nm:'MAGENTA', hex:'#FF2F92', hue:330, sat:.40 },
+  { k:'c3', nm:'LIME',    hex:'#A6FF00', hue: 78, sat:.50 },
+  { k:'c4', nm:'ORANYE',  hex:'#FF7A00', hue: 28, sat:.55 }
+];
+const CFG = { hp:100, dmg:25, mag:12, reloadMs:1600, fireMs:260, respawnMs:5000,
+              winKills:10, lockPx:96, minBlob:14, fovDeg:14, rangeM:45 };
+
+const S = {
+  mode:'band', isHost:false, code:'', started:false,
+  me:{ id:'', name:'KAMU', band:'c1', hp:CFG.hp, alive:true, kills:0, deaths:0 },
+  players:new Map(),            // id -> player
+  ammo:CFG.mag, reloading:false, lastShot:0,
+  lock:null, marks:new Map(),
+  heading:0, pos:null, drone:null, raf:0, scanT:0, posT:0
+};
+
+/* ---------------- helpers ---------------- */
+const now = () => performance.now();
+const bandOf = k => BANDS.find(b=>b.k===k) || BANDS[0];
+function show(id){ $$('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); }
+let toastT;
+function toast(msg, ms=2600){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'), ms);
+}
+function buzz(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
+const codeGen = () => Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+
+/* ---------------- audio (synthesised, no assets) ---------------- */
+let AC=null;
+const ac = () => (AC = AC || new (window.AudioContext||window.webkitAudioContext)());
+function tone(f0,f1,dur,type='sawtooth',vol=.22){
+  const c=ac(), o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.setValueAtTime(f0,c.currentTime);
+  o.frequency.exponentialRampToValueAtTime(Math.max(30,f1), c.currentTime+dur);
+  g.gain.setValueAtTime(vol,c.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
+  o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+dur);
+}
+function noise(dur=.12,vol=.18,hp=900){
+  const c=ac(), n=c.createBufferSource(), b=c.createBuffer(1,c.sampleRate*dur,c.sampleRate);
+  const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+  n.buffer=b; const f=c.createBiquadFilter(); f.type='highpass'; f.frequency.value=hp;
+  const g=c.createGain(); g.gain.value=vol; n.connect(f).connect(g).connect(c.destination); n.start();
+}
+const SFX = {
+  shot(){ tone(880,90,.16,'sawtooth',.16); noise(.09,.12,1400); },
+  hitmark(){ tone(1500,1500,.06,'square',.2); setTimeout(()=>tone(2100,2100,.05,'square',.16),55); },
+  hurt(){ tone(200,60,.32,'square',.2); },
+  down(){ tone(320,50,.7,'sawtooth',.24); },
+  reload(){ tone(260,260,.05,'square',.14); setTimeout(()=>tone(180,180,.06,'square',.14),180); },
+  spawn(){ tone(400,900,.22,'triangle',.16); }
+};
+
+/* ---------------- boot UI ---------------- */
+const MODE_NOTE = {
+  band:'Deteksi warna lewat kamera. Bidik pita lawan sampai bracket-nya merah, lalu tembak. Maksimal 4 pemain, butuh cahaya cukup.',
+  field:'Pakai GPS + kompas: kena kalau kamu menghadap lawan (±14°) dalam jarak 45 m. Cuma akurat di luar ruangan, area terbuka.',
+  solo:'Tanpa teman, tanpa jaringan. Drone target melayang di layar buat kalibrasi rasa tembakannya.'
+};
+$('#modeNote').textContent = MODE_NOTE.band;
+$('#modePick').addEventListener('click', e=>{
+  const b=e.target.closest('.opt'); if(!b) return;
+  $$('#modePick .opt').forEach(o=>o.setAttribute('aria-pressed', String(o===b)));
+  S.mode=b.dataset.mode; $('#modeNote').textContent=MODE_NOTE[S.mode];
+  const solo = S.mode==='solo';
+  $('#btnHost').hidden=solo; $('#btnJoinView').hidden=solo; $('#btnSolo').hidden=!solo;
+  $('#joinBox').hidden=true;
+});
+BANDS.forEach((b,i)=>{
+  const el=document.createElement('button');
+  el.className='band'; el.style.background=b.hex; el.textContent=b.nm;
+  el.setAttribute('aria-pressed', String(i===0)); el.dataset.k=b.k;
+  el.onclick=()=>{ $$('#bandPick .band').forEach(x=>x.setAttribute('aria-pressed',String(x===el)));
+    S.me.band=b.k; paintRoster(); };
+  $('#bandPick').append(el);
+});
+$('#inName').addEventListener('input', e=>{ S.me.name=(e.target.value||'KAMU').toUpperCase().slice(0,10); });
+$('#btnJoinView').onclick = ()=>{ $('#joinBox').hidden=!$('#joinBox').hidden; $('#inCode').focus(); };
+$('#btnHost').onclick = ()=> net.host();
+$('#btnJoin').onclick = ()=>{ const c=$('#inCode').value.trim().toUpperCase();
+  if(c.length!==4) return toast('Kode arena 4 huruf.'); net.join(c); };
+$('#btnSolo').onclick = ()=>{ S.isHost=true; startRound(); };
+$('#btnLeave').onclick = ()=>{ net.close(); show('s-boot'); };
+$('#btnStart').onclick = ()=>{ if(S.players.size<2 && S.mode!=='solo') return toast('Minimal 2 pemain.');
+  net.send({t:'start', mode:S.mode}); startRound(); };
+$('#btnHome').onclick = ()=>{ net.close(); show('s-boot'); };
+$('#btnAgain').onclick = ()=>{ [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
+  if(S.isHost){ net.send({t:'start', mode:S.mode}); startRound(); } else show('s-lobby'); };
+
+/* ---------------- roster ---------------- */
+function paintRoster(){
+  const list = S.players.size ? [...S.players.values()] : [S.me];
+  $('#pcount').textContent = `${list.length}/4`;
+  $('#roster').innerHTML = list.map(p=>`<div class="row">
+      <span class="chip" style="background:${bandOf(p.band).hex}"></span>
+      <span class="nm">${p.name}${p.id===S.me.id?' · kamu':''}</span>
+      <span class="st">${bandOf(p.band).nm}</span></div>`).join('');
+  $('#btnStart').hidden = !S.isHost;
+  $('#lobbyHint').textContent = S.isHost
+    ? 'Sebutkan kode ini ke teman-temanmu. Kamu yang mulai ronde.'
+    : 'Menunggu host memulai ronde.';
+}
+
+/* ---------------- networking (PeerJS star topology) ---------------- */
+const net = {
+  peer:null, conns:[], up:null,
+  host(){
+    S.isHost=true; S.code=codeGen();
+    S.me.id='H'+S.code;
+    S.players.clear(); S.players.set(S.me.id, S.me);
+    $('#lobbyCode').textContent=S.code; paintRoster(); show('s-lobby');
+    $('#netNote').textContent='Menghubungkan ke broker…';
+    this.peer = new Peer('tanda-'+S.code+'-h');
+    this.peer.on('open', ()=> $('#netNote').textContent='Arena siap. Kode aktif selama tab ini terbuka.');
+    this.peer.on('error', e=> $('#netNote').textContent='Jaringan: '+e.type+' — coba kode lain / cek internet.');
+    this.peer.on('connection', c=>{
+      this.conns.push(c);
+      c.on('data', d=>{ if(d.t==='hello') c.meta=d.p.id; this.relay(d,c); handle(d); });
+      c.on('close', ()=>{ this.conns=this.conns.filter(x=>x!==c);
+        if(c.meta){ S.players.delete(c.meta); paintRoster();
+          this.send({t:'roster', list:[...S.players.values()].map(pub)}); } });
+    });
+  },
+  join(code){
+    S.isHost=false; S.code=code; S.me.id='P'+Math.random().toString(36).slice(2,7).toUpperCase();
+    $('#lobbyCode').textContent=code; show('s-lobby');
+    $('#netNote').textContent='Mencari arena…';
+    this.peer = new Peer();
+    this.peer.on('open', ()=>{
+      this.up = this.peer.connect('tanda-'+code+'-h', {reliable:true});
+      this.up.on('open', ()=>{ $('#netNote').textContent='Tersambung.';
+        this.up.send({t:'hello', p:pub(S.me)}); });
+      this.up.on('data', handle);
+      this.up.on('close', ()=>{ toast('Sambungan ke host putus.'); });
+    });
+    this.peer.on('error', e=> $('#netNote').textContent='Gagal: '+e.type+' — pastikan kode benar & host masih online.');
+  },
+  relay(d, from){ this.conns.forEach(c=>{ if(c!==from && c.open) c.send(d); }); },
+  send(d){ if(S.isHost) this.relay(d,null); else if(this.up && this.up.open) this.up.send(d); },
+  close(){ try{ this.peer && this.peer.destroy(); }catch(e){} this.peer=null; this.conns=[]; this.up=null;
+    S.players.clear(); S.started=false; stopAR(); }
+};
+const pub = p => ({id:p.id,name:p.name,band:p.band,hp:p.hp,alive:p.alive,kills:p.kills,deaths:p.deaths});
+
+function handle(d){
+  switch(d.t){
+    case 'hello':
+      S.players.set(d.p.id, {...d.p});
+      if(S.isHost) net.send({t:'roster', list:[...S.players.values()].map(pub)});
+      paintRoster(); break;
+    case 'roster':
+      d.list.forEach(p=>{ const ex=S.players.get(p.id); S.players.set(p.id, ex?{...ex,...p}:{...p}); });
+      S.players.set(S.me.id, S.me); paintRoster(); break;
+    case 'start': S.mode=d.mode; startRound(); break;
+    case 'pos': { const p=S.players.get(d.id); if(p){ p.lat=d.lat; p.lng=d.lng; p.head=d.head; } break; }
+    case 'hit': if(d.to===S.me.id) takeHit(d.by); break;
+    case 'tagged': {
+      const by=S.players.get(d.by), to=S.players.get(d.to);
+      if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
+      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner('TAG','+1'); }
+      feed(`<b>${by?by.name:'?'}</b> menandai <b>${to?to.name:'?'}</b>`);
+      paintScore();
+      if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
+      break; }
+    case 'hp': { const p=S.players.get(d.id); if(p){ p.hp=d.hp; p.alive=d.alive; } break; }
+    case 'end': endRound(); break;
+  }
+}
+
+/* ---------------- HUD ---------------- */
+function paintHP(){
+  const hp=Math.max(0,S.me.hp);
+  $('#hpTxt').textContent=hp;
+  const f=$('#hpFill'); f.style.width=hp+'%'; f.classList.toggle('low', hp<=40);
+}
+function paintAmmo(){
+  const a=$('#ammo');
+  a.innerHTML = (S.reloading?'··':S.ammo)+`<small>/${CFG.mag}</small>`;
+  a.classList.toggle('empty', S.ammo===0 && !S.reloading);
+}
+function paintScore(){
+  const list=[...S.players.values()].sort((a,b)=>(b.kills||0)-(a.kills||0)).slice(0,4);
+  $('#score').innerHTML = list.length ? list.map(p=>
+    `<div style="color:${bandOf(p.band).hex}">${p.name} <b>${p.kills||0}</b></div>`).join('')
+    : '<div>LATIHAN</div>';
+}
+let feedLines=[];
+function feed(html){ feedLines.unshift(html); feedLines=feedLines.slice(0,4); $('#feed').innerHTML=feedLines.join('<br>'); }
+function banner(t,s,hold){ const b=$('#banner'); $('#bnT').textContent=t; $('#bnS').textContent=s||'';
+  b.classList.remove('on'); void b.offsetWidth;
+  if(hold){ b.style.opacity=1; } else { b.style.opacity=''; b.classList.add('on'); } }
+
+/* ---------------- camera ---------------- */
+let stream=null, wake=null;
+async function startCam(){
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+  const v=$('#cam'); v.srcObject=stream; await v.play();
+  try{ wake = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+function stopAR(){
+  cancelAnimationFrame(S.raf); S.raf=0;
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  if(wake){ try{wake.release();}catch(e){} wake=null; }
+  $('#ar').classList.remove('on');
+  S.marks.forEach(m=>m.remove()); S.marks.clear();
+  if(S.drone){ S.drone.el.remove(); S.drone=null; }
+}
+
+/* ---------------- sensors (field mode) ---------------- */
+async function startSensors(){
+  if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission){
+    try{ await DeviceOrientationEvent.requestPermission(); }catch(e){}
+  }
+  const onOri = e=>{
+    if(e.webkitCompassHeading!=null) S.heading=e.webkitCompassHeading;
+    else if(e.alpha!=null) S.heading=(360-e.alpha)%360;
+  };
+  window.addEventListener('deviceorientationabsolute', onOri, true);
+  window.addEventListener('deviceorientation', onOri, true);
+  navigator.geolocation.watchPosition(p=>{ S.pos={lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy}; },
+    ()=>toast('GPS tidak aktif — mode lapangan butuh lokasi.'), {enableHighAccuracy:true, maximumAge:1000});
+}
+const R=6371000, rad=d=>d*Math.PI/180;
+function distM(a,b){ const dφ=rad(b.lat-a.lat), dλ=rad(b.lng-a.lng), φ1=rad(a.lat), φ2=rad(b.lat);
+  const h=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function bearing(a,b){ const φ1=rad(a.lat),φ2=rad(b.lat),Δλ=rad(b.lng-a.lng);
+  const y=Math.sin(Δλ)*Math.cos(φ2), x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360; }
+const angDiff=(a,b)=>{ let d=Math.abs(a-b)%360; return d>180?360-d:d; };
+
+/* ---------------- vision: band tracking ---------------- */
+const scan=$('#scan'), sctx=scan.getContext('2d',{willReadFrequently:true});
+scan.width=96; scan.height=72;
+function rgb2hs(r,g,b){
+  r/=255;g/=255;b/=255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+  let h=0; if(d){ h = mx===r ? 60*(((g-b)/d)%6) : mx===g ? 60*((b-r)/d+2) : 60*((r-g)/d+4); }
+  return [(h+360)%360, mx?d/mx:0, mx];
+}
+function videoToScreen(nx,ny){
+  const v=$('#cam'), sw=innerWidth, sh=innerHeight;
+  const vw=v.videoWidth||1280, vh=v.videoHeight||720;
+  const k=Math.max(sw/vw, sh/vh);
+  return [ (sw-vw*k)/2 + nx*vw*k, (sh-vh*k)/2 + ny*vh*k ];
+}
+function scanFrame(){
+  const v=$('#cam'); if(!v.videoWidth) return [];
+  sctx.drawImage(v,0,0,scan.width,scan.height);
+  const d=sctx.getImageData(0,0,scan.width,scan.height).data;
+  const targets = [...S.players.values()].filter(p=>p.id!==S.me.id && p.alive!==false);
+  if(!targets.length) return [];
+  const acc = new Map(targets.map(p=>[p.band,{x:0,y:0,n:0,p}]));
+  for(let i=0,px=0; i<d.length; i+=4, px++){
+    const [h,s,val]=rgb2hs(d[i],d[i+1],d[i+2]);
+    if(val<.26) continue;
+    for(const [k,a] of acc){
+      const b=bandOf(k);
+      if(s>=b.sat && angDiff(h,b.hue)<15){
+        a.n++; a.x += px%scan.width; a.y += (px/scan.width)|0; break;
+      }
+    }
+  }
+  const out=[];
+  for(const [k,a] of acc){
+    if(a.n < CFG.minBlob) continue;
+    const [sx,sy]=videoToScreen((a.x/a.n)/scan.width, (a.y/a.n)/scan.height);
+    out.push({p:a.p, x:sx, y:sy, n:a.n, band:k});
+  }
+  return out;
+}
+function paintMarks(hits){
+  const seen=new Set();
+  hits.forEach(h=>{
+    seen.add(h.band);
+    let m=S.marks.get(h.band);
+    if(!m){ m=document.createElement('div'); m.className='mark'; $('#fx').append(m); S.marks.set(h.band,m); }
+    m.style.borderColor=bandOf(h.band).hex; m.style.left=h.x+'px'; m.style.top=h.y+'px';
+  });
+  S.marks.forEach((m,k)=>{ if(!seen.has(k)){ m.remove(); S.marks.delete(k); } });
+}
+
+/* ---------------- solo drone ---------------- */
+function spawnDrone(){
+  const el=document.createElement('div');
+  el.style.cssText='position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border:2px solid #FFC400;'+
+    'background:rgba(255,196,0,.14);display:grid;place-items:center;font:700 11px/1 "Azeret Mono",monospace;'+
+    'color:#FFC400;letter-spacing:.14em;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)';
+  el.textContent='DRONE';
+  $('#fx').append(el);
+  S.drone={el, t:Math.random()*100, hp:3, ax:.3+Math.random()*.3, ay:.15+Math.random()*.2};
+}
+function moveDrone(dt){
+  const d=S.drone; if(!d) return; d.t+=dt/1000;
+  d.x = innerWidth*(.5+.34*Math.sin(d.t*d.ax*2));
+  d.y = innerHeight*(.45+.22*Math.sin(d.t*d.ay*3.1));
+  d.el.style.left=d.x+'px'; d.el.style.top=d.y+'px';
+  d.el.style.opacity = d.hp/3*.6+.4;
+}
+
+/* ---------------- targeting + firing ---------------- */
+function acquire(){
+  const cx=innerWidth/2, cy=innerHeight/2;
+  if(S.mode==='solo'){
+    const d=S.drone;
+    if(d && Math.hypot(d.x-cx, d.y-cy) < CFG.lockPx) return {name:'DRONE', drone:true};
+    return null;
+  }
+  if(S.mode==='band'){
+    const hits=scanFrame(); paintMarks(hits);
+    const near=hits.map(h=>({...h, d:Math.hypot(h.x-cx,h.y-cy)}))
+                   .filter(h=>h.d<CFG.lockPx).sort((a,b)=>a.d-b.d)[0];
+    return near ? {id:near.p.id, name:near.p.name} : null;
+  }
+  // field
+  if(!S.pos) return null;
+  let best=null;
+  for(const p of S.players.values()){
+    if(p.id===S.me.id || !p.lat || p.alive===false) continue;
+    const dist=distM(S.pos,p), br=bearing(S.pos,p), off=angDiff(br,S.heading);
+    if(dist<CFG.rangeM && off<CFG.fovDeg/2 && (!best||dist<best.dist)) best={id:p.id,name:p.name,dist,off};
+  }
+  return best;
+}
+function fire(){
+  if(!S.started) return;
+  if(!S.me.alive) return;
+  if(S.reloading) return;
+  if(now()-S.lastShot < CFG.fireMs) return;
+  if(S.ammo<=0){ SFX.hurt(); reload(); return; }
+  S.lastShot=now(); S.ammo--; paintAmmo();
+  SFX.shot(); buzz(12);
+  $('#muzzle').classList.remove('on'); void $('#muzzle').offsetWidth; $('#muzzle').classList.add('on');
+  $('#ret').classList.add('fire'); setTimeout(()=>$('#ret').classList.remove('fire'),90);
+
+  const t=S.lock;
+  if(!t) return;
+  if(t.drone){
+    S.drone.hp--; SFX.hitmark();
+    if(S.drone.hp<=0){ S.me.kills++; paintScore(); banner('DRONE JATUH','+1');
+      S.drone.el.remove(); S.drone=null; setTimeout(spawnDrone,900); }
+    return;
+  }
+  net.send({t:'hit', by:S.me.id, to:t.id});
+}
+function takeHit(byId){
+  if(!S.me.alive) return;
+  S.me.hp -= CFG.dmg; paintHP();
+  SFX.hurt(); buzz([28,50,28]);
+  $('#flash').classList.remove('on'); void $('#flash').offsetWidth; $('#flash').classList.add('on');
+  net.send({t:'hp', id:S.me.id, hp:Math.max(0,S.me.hp), alive:S.me.hp>0});
+  if(S.me.hp<=0) down(byId);
+}
+function down(byId){
+  S.me.alive=false; S.me.hp=0; paintHP(); SFX.down(); buzz([60,60,120]);
+  net.send({t:'tagged', by:byId, to:S.me.id});
+  handle({t:'tagged', by:byId, to:S.me.id});
+  let n=CFG.respawnMs/1000;
+  banner('TERTEMBAK', `respawn ${n}`, true);
+  const iv=setInterval(()=>{ n--; $('#bnS').textContent='respawn '+n;
+    if(n<=0){ clearInterval(iv); respawn(); } },1000);
+}
+function respawn(){
+  S.me.hp=CFG.hp; S.me.alive=true; S.ammo=CFG.mag; S.reloading=false;
+  paintHP(); paintAmmo(); SFX.spawn(); banner('AKTIF','kembali ke arena');
+  net.send({t:'hp', id:S.me.id, hp:S.me.hp, alive:true});
+}
+function reload(){
+  if(S.reloading || S.ammo===CFG.mag) return;
+  S.reloading=true; paintAmmo(); SFX.reload();
+  setTimeout(()=>{ S.ammo=CFG.mag; S.reloading=false; paintAmmo(); }, CFG.reloadMs);
+}
+
+/* ---------------- radar (field mode) ---------------- */
+const rc=$('#radar').getContext('2d');
+function paintRadar(){
+  const w=192, c=w/2; rc.clearRect(0,0,w,w);
+  rc.strokeStyle='rgba(255,255,255,.16)'; rc.lineWidth=1;
+  [c*.4,c*.72,c-2].forEach(r=>{ rc.beginPath(); rc.arc(c,c,r,0,7); rc.stroke(); });
+  rc.fillStyle='#FFC400'; rc.beginPath(); rc.moveTo(c,c-9); rc.lineTo(c-6,c+7); rc.lineTo(c+6,c+7); rc.fill();
+  if(!S.pos) return;
+  for(const p of S.players.values()){
+    if(p.id===S.me.id || !p.lat) continue;
+    const d=Math.min(distM(S.pos,p), CFG.rangeM*1.6);
+    const a=rad(bearing(S.pos,p)-S.heading), r=(d/(CFG.rangeM*1.6))*(c-8);
+    rc.fillStyle=bandOf(p.band).hex;
+    rc.beginPath(); rc.arc(c+Math.sin(a)*r, c-Math.cos(a)*r, 5, 0, 7); rc.fill();
+  }
+}
+
+/* ---------------- loop ---------------- */
+let last=0;
+function loop(t){
+  S.raf=requestAnimationFrame(loop);
+  const dt=t-last; last=t;
+  if(S.mode==='solo') moveDrone(dt);
+  if(t-S.scanT>70){
+    S.scanT=t;
+    S.lock = S.me.alive ? acquire() : null;
+    $('#ret').classList.toggle('lock', !!S.lock);
+    $('#lockName').textContent = S.lock ? S.lock.name : '';
+    if(S.mode==='field'){ paintRadar();
+      if(t-S.posT>500 && S.pos){ S.posT=t;
+        net.send({t:'pos', id:S.me.id, lat:S.pos.lat, lng:S.pos.lng, head:S.heading}); } }
+  }
+}
+
+/* ---------------- round control ---------------- */
+async function startRound(){
+  try{ ac().resume(); }catch(e){}
+  Object.assign(S.me,{hp:CFG.hp, alive:true, kills:0, deaths:0});
+  S.ammo=CFG.mag; S.reloading=false; S.started=true; feedLines=[];
+  if(S.mode==='solo'){ S.players.clear(); }
+  else { S.players.set(S.me.id, S.me); [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;}); }
+  $('#meName').textContent=S.me.name;
+  $('#radar').hidden = S.mode!=='field';
+  paintHP(); paintAmmo(); paintScore(); $('#feed').innerHTML='';
+  show(''); $('#ar').classList.add('on');
+  try{ await startCam(); }
+  catch(e){ show('s-boot'); $('#ar').classList.remove('on');
+    return toast('Kamera ditolak. Butuh HTTPS + izin kamera.', 4200); }
+  if(S.mode==='field') await startSensors();
+  if(S.mode==='solo') spawnDrone();
+  banner('MULAI', S.mode==='band'?'bidik pita lawan':S.mode==='field'?'hadapkan HP ke lawan':'jatuhkan drone');
+  last=performance.now(); S.raf=requestAnimationFrame(loop);
+}
+function endRound(){
+  S.started=false; stopAR();
+  const list=[...(S.players.size?S.players.values():[S.me])].sort((a,b)=>(b.kills||0)-(a.kills||0));
+  $('#endTitle').innerHTML = list[0] && list[0].id===S.me.id ? 'Kamu<em>menang</em>' : 'Hasil<em>ronde</em>';
+  $('#endBoard').innerHTML = list.map((p,i)=>`<div class="row">
+      <span class="st">${String(i+1).padStart(2,'0')}</span>
+      <span class="chip" style="background:${bandOf(p.band).hex}"></span>
+      <span class="nm">${p.name}</span>
+      <span class="st">${p.kills||0} tag · ${p.deaths||0} kena</span></div>`).join('');
+  show('s-end');
+}
+
+/* ---------------- input ---------------- */
+$('#btnFire').addEventListener('pointerdown', e=>{ e.preventDefault(); fire(); });
+$('#btnReload').onclick = reload;
+$('#btnQuit').onclick = ()=>{ endRound(); };
+$('#ar').addEventListener('pointerdown', e=>{ if(e.target.closest('.hud')) return; fire(); });
+window.addEventListener('keydown', e=>{ if(!S.started) return;
+  if(e.code==='Space'){ e.preventDefault(); fire(); } if(e.key==='r') reload(); });
+paintRoster();
+
+</script>
+</body>
+</html>
