@@ -23,6 +23,14 @@
 }
 [hidden]{display:none !important}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+/* iOS ignores user-scalable=no, so double-tap zoom and the long-press
+   selection/callout have to be switched off explicitly */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input{-webkit-user-select:text;user-select:text}
+img,video,canvas,svg{-webkit-user-drag:none;user-select:none}
+button,.opt,.band,.cal,.mini,.fire,.btn{touch-action:manipulation;-webkit-touch-callout:none}
+#ar{touch-action:none}
 html,body{height:100svh;overflow:hidden;background:var(--bg);color:var(--ink);
   font-family:'Instrument Sans',system-ui,sans-serif;overscroll-behavior:none;
   font-size:clamp(15px,1.6vh + .6vw,17px)}
@@ -505,6 +513,20 @@ addEventListener('resize', fitViewport); addEventListener('orientationchange', (
 if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport);
   visualViewport.addEventListener('scroll', fitViewport); }
 const view = () => ({ w:$('#ar').clientWidth||innerWidth, h:$('#ar').clientHeight||innerHeight });
+
+/* Gesture hygiene: pinch, double-tap zoom, and the long-press callout all fire
+   during normal play (rapid trigger taps, holding a chip to clear a sample). */
+['gesturestart','gesturechange','gestureend'].forEach(t=>
+  document.addEventListener(t, e=>e.preventDefault(), {passive:false}));
+document.addEventListener('dblclick', e=>e.preventDefault(), {passive:false});
+document.addEventListener('contextmenu', e=>{ if(!e.target.closest('input')) e.preventDefault(); });
+document.addEventListener('selectstart', e=>{ if(!e.target.closest('input')) e.preventDefault(); });
+let lastTap=0;
+document.addEventListener('touchend', e=>{
+  const t=Date.now();
+  if(t-lastTap<350 && !e.target.closest('input')) e.preventDefault();  // kills double-tap zoom
+  lastTap=t;
+}, {passive:false});
 
 /* Nothing here has a console attached on a phone, so failures must announce
    themselves on screen or they look like "the button does nothing". */
