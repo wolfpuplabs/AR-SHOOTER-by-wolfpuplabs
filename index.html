@@ -106,9 +106,9 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
   text-transform:uppercase;opacity:0;transition:opacity .12s;white-space:nowrap}
 #ret.lock ~ #lockName{opacity:1}
 
-.mark{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;border:2px solid;pointer-events:none;
+.mark{position:absolute;border:2px solid;pointer-events:none;
   clip-path:polygon(0 0,34% 0,0 34%,0 0,100% 0,100% 34%,66% 0,100% 0,100% 100%,66% 100%,100% 66%,100% 100%,0 100%,0 66%,34% 100%,0 100%);
-  transition:left .09s linear,top .09s linear}
+  transition:left .08s linear,top .08s linear,width .12s linear,height .12s linear}
 
 /* HUD */
 .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;
@@ -117,7 +117,7 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 .top{display:flex;gap:10px;align-items:flex-start}
 .plate{background:rgba(10,11,8,.78);border:1px solid var(--line2);padding:9px 12px}
 .hud{padding-top:max(12px, env(safe-area-inset-top,0px))}
-.hp{flex:1;max-width:260px}
+.hp{flex:1;max-width:min(260px,46vw)}
 .hp .lbl{display:flex;justify-content:space-between;font-family:'Azeret Mono',monospace;font-size:10px;
   letter-spacing:.18em;color:var(--dim);margin-bottom:6px;text-transform:uppercase}
 .hpbar{height:7px;background:rgba(255,255,255,.12);overflow:hidden}
@@ -126,23 +126,27 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 #score{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.1em;line-height:1.7;margin-left:auto;text-align:right}
 #score b{color:var(--hz)}
 .mid{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-#feed{font-family:'Azeret Mono',monospace;font-size:11px;line-height:1.8;color:var(--dim);max-width:56%}
+#feed{font-family:'Azeret Mono',monospace;font-size:clamp(9px,2.5vw,11px);line-height:1.7;
+  color:var(--dim);max-width:58%;text-shadow:0 1px 6px #000}
 #feed b{color:var(--txt)}
-#radar{width:96px;height:96px;background:var(--glass);border:1px solid var(--line2)}
-.bot{display:flex;align-items:center;gap:14px;margin-top:12px}
-#ammo{font-family:'Azeret Mono',monospace;font-weight:900;font-size:30px;letter-spacing:.02em;
+#radar{width:clamp(66px,20vw,96px);height:clamp(66px,20vw,96px);flex:none;background:var(--glass);border:1px solid var(--line2)}
+.bot{display:flex;align-items:center;gap:clamp(7px,2.4vw,14px);margin-top:10px;flex-wrap:nowrap}
+#ammo{font-family:'Azeret Mono',monospace;font-weight:900;font-size:clamp(19px,6vw,30px);flex:none;letter-spacing:.02em;
   text-shadow:0 2px 12px rgba(0,0,0,.8);line-height:1}
 #ammo small{font-size:13px;font-weight:400;color:var(--dim)}
 #ammo.empty{color:var(--hit)}
-.fire{width:88px;height:88px;border-radius:50%;margin-left:auto;background:rgba(255,196,0,.14);
+.fire{width:clamp(62px,17vw,88px);height:clamp(62px,17vw,88px);flex:none;border-radius:50%;margin-left:auto;background:rgba(255,196,0,.14);
   border:2px solid var(--hz);color:var(--hz);font-family:'Azeret Mono',monospace;font-weight:900;
-  font-size:13px;letter-spacing:.12em;display:grid;place-items:center;transition:transform .07s,background .07s}
+  font-size:clamp(10px,2.6vw,13px);letter-spacing:.1em;display:grid;place-items:center;transition:transform .07s,background .07s}
 .fire:active{transform:scale(.93);background:rgba(255,196,0,.34)}
-.mini{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.14em;padding:11px 13px;
+.mini{font-family:'Azeret Mono',monospace;font-size:clamp(9px,2.4vw,11px);letter-spacing:.1em;
+  padding:clamp(8px,2.4vw,11px) clamp(9px,2.6vw,13px);white-space:nowrap;
   background:var(--glass);border:1px solid var(--line2);text-transform:uppercase}
 
-#ar.on ~ .toast{bottom:calc(126px + var(--pad))}
-#calbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#ar.on ~ .toast{display:none}
+#calbar{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+#calbar::-webkit-scrollbar{display:none}
+.cal{flex:none}
 .cal{font-family:'Azeret Mono',monospace;font-size:10px;letter-spacing:.1em;padding:8px 10px;
   background:rgba(10,11,8,.78);border:1px solid var(--line2);border-left:4px solid;text-transform:uppercase}
 .cal b{color:var(--hz);font-weight:700}
@@ -324,7 +328,7 @@ const BANDS = [
   { k:'c4', nm:'ORANYE',  hex:'#FF7A00', hue: 28, sat:.55 }
 ];
 const CFG = { hp:100, dmg:25, mag:12, reloadMs:1600, fireMs:260, respawnMs:5000,
-              winKills:10, lockPx:96, minBlob:14, fovDeg:14, rangeM:45, minRangeM:8 };
+              winKills:10, lockPx:96, minBlob:26, fovDeg:14, rangeM:45, minRangeM:8, holdMs:320 };
 
 const S = {
   mode:'band', isHost:false, code:'', started:false,
@@ -342,6 +346,7 @@ const bandOf = k => BANDS.find(b=>b.k===k) || BANDS[0];
 function show(id){ $$('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); }
 let toastT;
 function toast(msg, ms=2600){
+  if(S.started){ feed(`<b>${msg}</b>`); return; }
   const t=$('#toast'); t.textContent=msg; t.classList.add('on');
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'), ms);
 }
@@ -607,45 +612,102 @@ function bearing(a,b){ const φ1=rad(a.lat),φ2=rad(b.lat),Δλ=rad(b.lng-a.lng)
   return (Math.atan2(y,x)*180/Math.PI+360)%360; }
 const angDiff=(a,b)=>{ let d=Math.abs(a-b)%360; return d>180?360-d:d; };
 
-/* ---------------- vision: band tracking ---------------- */
+/* ---------------- vision: band tracking ----------------
+   Cluster-based, not global-average: the frame is bucketed into cells, the
+   densest cell wins, and the blob is grown from there. Stray pixels of the
+   same hue elsewhere (wood, skin, curtains) no longer drag the box around. */
 const scan=$('#scan'), sctx=scan.getContext('2d',{willReadFrequently:true});
-scan.width=96; scan.height=72;
+const SW=128, SH=96, CELL=8, GW=SW/CELL, GH=SH/CELL;
+scan.width=SW; scan.height=SH;
+const grid={};                       // band -> {n,sx,sy}
+const gridFor = k => grid[k] || (grid[k]={n:new Int32Array(GW*GH), sx:new Int32Array(GW*GH), sy:new Int32Array(GW*GH)});
+S.track={};                          // band -> smoothed box
+
 function rgb2hs(r,g,b){
   r/=255;g/=255;b/=255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
   let h=0; if(d){ h = mx===r ? 60*(((g-b)/d)%6) : mx===g ? 60*((b-r)/d+2) : 60*((r-g)/d+4); }
   return [(h+360)%360, mx?d/mx:0, mx];
 }
 function videoToScreen(nx,ny){
-  const v=$('#cam'), {w:sw,h:sh}=view();
+  const v=$('#cam'), sw=innerWidth, sh=innerHeight;
   const vw=v.videoWidth||1280, vh=v.videoHeight||720;
   const k=Math.max(sw/vw, sh/vh);
   return [ (sw-vw*k)/2 + nx*vw*k, (sh-vh*k)/2 + ny*vh*k ];
 }
 function scanFrame(){
   const v=$('#cam'); if(!v.videoWidth) return [];
-  sctx.drawImage(v,0,0,scan.width,scan.height);
-  const d=sctx.getImageData(0,0,scan.width,scan.height).data;
-  const targets = [...S.players.values()].filter(p=>p.id!==S.me.id && p.alive!==false);
+  const targets=[...S.players.values()].filter(p=>p.id!==S.me.id && p.alive!==false);
   if(!targets.length) return [];
-  const acc = new Map(targets.map(p=>[p.band,{x:0,y:0,n:0,p}]));
-  for(let i=0,px=0; i<d.length; i+=4, px++){
-    const [h,s,val]=rgb2hs(d[i],d[i+1],d[i+2]);
-    if(val<.26) continue;
-    for(const [k,a] of acc){
-      const c=S.cal[k], b=bandOf(k);
-      const hue = c ? c.hue : b.hue, sat = c ? Math.max(.18, c.sat*.55) : b.sat, tol = c ? 20 : 15;
-      if(s>=sat && angDiff(h,hue)<tol){
-        a.n++; a.x += px%scan.width; a.y += (px/scan.width)|0; break;
+  sctx.drawImage(v,0,0,SW,SH);
+  const d=sctx.getImageData(0,0,SW,SH).data;
+  const keys=[...new Set(targets.map(p=>p.band))];
+  keys.forEach(k=>{ const g=gridFor(k); g.n.fill(0); g.sx.fill(0); g.sy.fill(0); });
+
+  for(let y=0;y<SH;y++){
+    for(let x=0;x<SW;x++){
+      const i=(y*SW+x)*4;
+      const [h,sa,va]=rgb2hs(d[i],d[i+1],d[i+2]);
+      if(va<.28) continue;
+      for(const k of keys){
+        const c=S.cal[k], b=bandOf(k);
+        const hue = c ? c.hue : b.hue;
+        // calibrated targets get a tight hue window and a saturation floor tied to
+        // the sample, which is what keeps skin (sat ~.25) out of an orange band
+        const sat = c ? Math.max(.34, c.sat*.72) : Math.max(.40, b.sat);
+        const tol = c ? 11 : 14;
+        if(sa>=sat && angDiff(h,hue)<tol){
+          const gi=((y/CELL)|0)*GW + ((x/CELL)|0), g=gridFor(k);
+          g.n[gi]++; g.sx[gi]+=x; g.sy[gi]+=y;
+          break;
+        }
       }
     }
   }
-  const out=[];
-  S.blob={};
-  for(const [k,a] of acc){
-    S.blob[k]=a.n;
-    if(a.n < CFG.minBlob) continue;
-    const [sx,sy]=videoToScreen((a.x/a.n)/scan.width, (a.y/a.n)/scan.height);
-    out.push({p:a.p, x:sx, y:sy, n:a.n, band:k});
+
+  const out=[]; S.blob={};
+  for(const k of keys){
+    const g=gridFor(k);
+    let peak=0, pi=-1;
+    for(let i=0;i<g.n.length;i++) if(g.n[i]>peak){ peak=g.n[i]; pi=i; }
+    if(pi<0 || peak<3){ S.blob[k]=0; continue; }
+    // grow the cluster outward from the densest cell only
+    const thr=Math.max(2, peak*0.28), seen=new Uint8Array(g.n.length), q=[pi];
+    seen[pi]=1;
+    let tot=0, sx=0, sy=0, cx0=GW, cx1=-1, cy0=GH, cy1=-1;
+    while(q.length){
+      const i=q.pop(), gx=i%GW, gy=(i/GW)|0;
+      tot+=g.n[i]; sx+=g.sx[i]; sy+=g.sy[i];
+      if(gx<cx0)cx0=gx; if(gx>cx1)cx1=gx; if(gy<cy0)cy0=gy; if(gy>cy1)cy1=gy;
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+        const nx=gx+dx, ny=gy+dy; if(nx<0||ny<0||nx>=GW||ny>=GH) continue;
+        const ni=ny*GW+nx; if(seen[ni]||g.n[ni]<thr) continue;
+        seen[ni]=1; q.push(ni);
+      }
+    }
+    S.blob[k]=tot;
+    if(tot<CFG.minBlob) continue;
+    const cells=(cx1-cx0+1)*(cy1-cy0+1);
+    if(tot/(cells*CELL*CELL) < 0.16) continue;   // too sparse to be a solid card
+
+    const [px,py]=videoToScreen((sx/tot)/SW, (sy/tot)/SH);
+    const [bx0,by0]=videoToScreen(cx0*CELL/SW, cy0*CELL/SH);
+    const [bx1,by1]=videoToScreen((cx1+1)*CELL/SW, (cy1+1)*CELL/SH);
+    const box={x:px, y:py, w:Math.max(34,bx1-bx0), h:Math.max(34,by1-by0)};
+
+    const prev=S.track[k];                        // exponential smoothing kills the jitter
+    const a = prev && now()-prev.t < 400 ? .45 : 1;
+    const sm = prev && a<1
+      ? {x:prev.x+(box.x-prev.x)*a, y:prev.y+(box.y-prev.y)*a,
+         w:prev.w+(box.w-prev.w)*a, h:prev.h+(box.h-prev.h)*a}
+      : box;
+    S.track[k]={...sm, t:now()};
+    out.push({p:targets.find(t=>t.band===k), band:k, n:tot, ...sm});
+  }
+  // brief coast so a one-frame dropout doesn't make the box blink away
+  for(const k of keys){
+    const t=S.track[k];
+    if(t && !out.some(o=>o.band===k) && now()-t.t<CFG.holdMs)
+      out.push({p:targets.find(p=>p.band===k), band:k, n:S.blob[k]||0, x:t.x, y:t.y, w:t.w, h:t.h, stale:true});
   }
   return out;
 }
@@ -655,7 +717,11 @@ function paintMarks(hits){
     seen.add(h.band);
     let m=S.marks.get(h.band);
     if(!m){ m=document.createElement('div'); m.className='mark'; $('#fx').append(m); S.marks.set(h.band,m); }
-    m.style.borderColor=bandOf(h.band).hex; m.style.left=h.x+'px'; m.style.top=h.y+'px';
+    const c=S.cal[h.band] ? `hsl(${S.cal[h.band].hue} 90% 55%)` : bandOf(h.band).hex;
+    m.style.borderColor=c; m.style.opacity=h.stale?.45:1;
+    m.style.width=h.w+'px'; m.style.height=h.h+'px';
+    m.style.margin=`${-h.h/2}px 0 0 ${-h.w/2}px`;
+    m.style.left=h.x+'px'; m.style.top=h.y+'px';
   });
   S.marks.forEach((m,k)=>{ if(!seen.has(k)){ m.remove(); S.marks.delete(k); } });
 }
@@ -723,7 +789,7 @@ function paintDiag(){
       L.push(`${p.name}: ${distM(S.pos,p).toFixed(0)}m  off ${angDiff(bearing(S.pos,p),S.heading).toFixed(0)}°`);
     }
   } else if(S.mode==='band'){
-    L.push(`butuh ${CFG.minBlob}px buat lock`);
+    L.push(`butuh ${CFG.minBlob}px + gumpalan padat buat lock`);
     L.push(`tap chip = sampel warna · tahan 0,7s = hapus`);
   }
   $('#diag').innerHTML=L.map(x=>`<b>${x}</b>`).join('\n');
@@ -759,9 +825,11 @@ function acquire(){
   }
   if(S.mode==='band'){
     const hits=scanFrame(); paintMarks(hits);
-    const near=hits.map(h=>({...h, d:Math.hypot(h.x-cx,h.y-cy)}))
-                   .filter(h=>h.d<CFG.lockPx).sort((a,b)=>a.d-b.d)[0];
-    return near ? {id:near.p.id, name:near.p.name} : null;
+    const pad=14;
+    const on=hits.filter(h=>h.p && !h.stale &&
+        Math.abs(h.x-cx) <= h.w/2+pad && Math.abs(h.y-cy) <= h.h/2+pad)
+      .sort((a,b)=>b.n-a.n)[0];
+    return on ? {id:on.p.id, name:on.p.name} : null;
   }
   // field
   if(!S.pos) return null;
