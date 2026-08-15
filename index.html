@@ -186,6 +186,10 @@ input:focus{border-color:var(--peri);outline:none}
 .hpbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mint),var(--ok));
   transition:width .28s cubic-bezier(.2,.9,.3,1),background .28s}
 .hpbar i.low{background:linear-gradient(90deg,var(--coral),#FFA07A)}
+.hpbar i.prot{background:linear-gradient(90deg,var(--peri),var(--lilac));animation:shield 1s ease-in-out infinite}
+@keyframes shield{50%{opacity:.45}}
+#protTag{color:var(--lilac);letter-spacing:.16em;font-size:.58rem;
+  border:1px solid rgba(198,166,255,.5);border-radius:99px;padding:2px 7px;margin-left:8px}
 #score{margin-left:auto;font-family:'Martian Mono',monospace;font-size:.68rem;line-height:1.9;text-align:right}
 #score b{color:var(--ink)}
 .mid{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;min-height:0}
@@ -300,7 +304,7 @@ input:focus{border-color:var(--peri);outline:none}
   <div class="hud">
     <div class="top">
       <div class="glass hp">
-        <div class="lbl"><span id="meName">PEMAIN</span><b id="hpTxt">100</b></div>
+        <div class="lbl"><span id="meName">PEMAIN</span><span id="protTag" hidden>KEBAL</span><b id="hpTxt">100</b></div>
         <div class="hpbar"><i id="hpFill"></i></div>
       </div>
       <div class="glass" id="score">memuat…</div>
@@ -453,7 +457,7 @@ const BANDS = [
   { k:'c4', nm:'ORANYE',  hex:'#FF7A00', hue: 28, sat:.55 }
 ];
 const CFG = { hp:100, dmg:25, headDmg:50, mag:12, reloadMs:1600, fireMs:260, respawnMs:5000,
-              winKills:10, lockPx:96, minBlob:26, fovDeg:14, rangeM:45, minRangeM:8, holdMs:320 };
+              winKills:10, lockPx:96, minBlob:26, fovDeg:14, rangeM:45, minRangeM:8, holdMs:320, shieldMs:2500 };
 
 const S = {
   mode:'band', isHost:false, code:'', started:false,
@@ -462,11 +466,12 @@ const S = {
   ammo:CFG.mag, reloading:false, lastShot:0,
   lock:null, marks:new Map(),
   heading:0, pos:null, drone:null, raf:0, scanT:0, posT:0,
-  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0, overlay:'min'
+  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0, overlay:'min', shieldUntil:0
 };
 
 /* ---------------- helpers ---------------- */
 const now = () => performance.now();
+const targetable = p => !!p && p.alive!==false && !p.prot;
 const bandOf = k => BANDS.find(b=>b.k===k) || BANDS[0];
 function show(id){ $$('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); }
 let toastT;
@@ -688,7 +693,7 @@ function handle(d){
       paintScore();
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
       break; }
-    case 'hp': { const p=S.players.get(d.id); if(p){ p.hp=d.hp; p.alive=d.alive; } break; }
+    case 'hp': { const p=S.players.get(d.id); if(p){ p.hp=d.hp; p.alive=d.alive; p.prot=!!d.prot; } break; }
     case 'rematch':
       if(S.isHost){ toast(`${d.by} minta main lagi.`);
         [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
@@ -701,9 +706,13 @@ function handle(d){
 
 /* ---------------- HUD ---------------- */
 function paintHP(){
-  const hp=Math.max(0,S.me.hp);
+  const hp=Math.max(0,S.me.hp), prot = now() < S.shieldUntil;
   $('#hpTxt').textContent=hp;
-  const f=$('#hpFill'); f.style.width=hp+'%'; f.classList.toggle('low', hp<=40);
+  const f=$('#hpFill');
+  f.style.width=hp+'%';
+  f.classList.toggle('low', hp<=40 && !prot);
+  f.classList.toggle('prot', prot);
+  $('#protTag').hidden = !prot;
 }
 const RING=2*Math.PI*44;
 function paintAmmo(){
@@ -800,7 +809,7 @@ function videoToScreen(nx,ny){
 }
 function scanFrame(){
   const v=$('#cam'); if(!v.videoWidth) return [];
-  const targets=[...S.players.values()].filter(p=>p.id!==S.me.id && p.alive!==false);
+  const targets=[...S.players.values()].filter(p=>p.id!==S.me.id && targetable(p));
   if(!targets.length) return [];
   sctx.drawImage(v,0,0,SW,SH);
   const d=sctx.getImageData(0,0,SW,SH).data;
@@ -1171,6 +1180,7 @@ function sizeSilo(){
   octx.setTransform(dpr,0,0,dpr,0,0);
 }
 function figColor(fg){
+  if(fg.p && !targetable(fg.p)) return 'rgba(160,172,190,.75)';
   if(!fg.p) return 'rgba(233,239,250,.5)';
   const c=S.cal[fg.p.band];
   return c ? `hsl(${c.hue} 92% 60%)` : bandOf(fg.p.band).hex;
@@ -1251,7 +1261,8 @@ function drawFigures(){
     }
 
     if(S.overlay==='min') continue;
-    const label = fg.p ? fg.p.name + (fg.head?'  ×2':'') : 'ORANG ?';
+    const label = fg.p ? (targetable(fg.p) ? fg.p.name + (fg.head?'  ×2':'')
+                                            : fg.p.name + '  · AMAN') : 'ORANG ?';
     octx.font='600 12px "Martian Mono", monospace';
     const tw=octx.measureText(label).width;
     const lx=Math.max(6, Math.min(innerWidth-tw-18, x0)), ly=Math.max(20, y0-10);
@@ -1320,7 +1331,7 @@ function acquire(){
     const [nx,ny]=screenToVideo(cx,cy);
     // head first — it is the smaller, higher-value target
     for(const fg of AI.figs){
-      if(!fg.p || !fg.head) continue;
+      if(!fg.p || !fg.head || !targetable(fg.p)) continue;
       const hb=fg.head.nb, hcx=hb.x+hb.w/2, hcy=hb.y+hb.h/2;
       const dx=(nx-hcx)/(hb.w/2), dy=(ny-hcy)/(hb.h/2);
       if(dx*dx+dy*dy <= 1.15)
@@ -1328,7 +1339,7 @@ function acquire(){
     }
     // body: pixel-exact against the segmentation mask, with the pose box as fallback
     for(const fg of AI.figs){
-      if(!fg.p || fg.faceOnly) continue;
+      if(!fg.p || fg.faceOnly || !targetable(fg.p)) continue;
       const inMask = fg.mask ? maskAt(fg, nx, ny)
         : (nx>fg.nb.x && nx<fg.nb.x+fg.nb.w && ny>fg.nb.y && ny<fg.nb.y+fg.nb.h);
       if(inMask) return {id:fg.p.id, name:fg.p.name};
@@ -1339,7 +1350,7 @@ function acquire(){
   if(!S.pos) return null;
   let best=null;
   for(const p of S.players.values()){
-    if(p.id===S.me.id || !p.lat || p.alive===false) continue;
+    if(p.id===S.me.id || !p.lat || !targetable(p)) continue;
     const dist=distM(S.pos,p), br=bearing(S.pos,p), off=angDiff(br,S.heading);
     if(dist>=CFG.minRangeM && dist<CFG.rangeM && off<CFG.fovDeg/2 && (!best||dist<best.dist))
       best={id:p.id,name:p.name,dist,off};
@@ -1368,7 +1379,7 @@ function fire(){
   net.send({t:'hit', by:S.me.id, to:t.id, dmg: t.head?CFG.headDmg:CFG.dmg, head:!!t.head});
 }
 function takeHit(byId, dmg, head){
-  if(!S.me.alive) return;
+  if(!S.me.alive || now() < S.shieldUntil) return;
   S.me.hp -= Math.min(CFG.headDmg, dmg || CFG.dmg); paintHP();
   if(head) banner('KENA KEPALA','−'+CFG.headDmg);
   SFX.hurt(); buzz([28,50,28]);
@@ -1379,6 +1390,7 @@ function takeHit(byId, dmg, head){
 }
 function down(byId, head){
   S.me.alive=false; S.me.hp=0; paintHP(); SFX.down(); buzz([60,60,120]);
+  net.send({t:'hp', id:S.me.id, hp:0, alive:false, prot:true});
   net.send({t:'tagged', by:byId, to:S.me.id, head:!!head});
   handle({t:'tagged', by:byId, to:S.me.id, head:!!head});
   let n=CFG.respawnMs/1000;
@@ -1388,8 +1400,14 @@ function down(byId, head){
 }
 function respawn(){
   S.me.hp=CFG.hp; S.me.alive=true; S.ammo=CFG.mag; S.reloading=false;
-  paintHP(); paintAmmo(); SFX.spawn(); banner('AKTIF','kembali ke arena');
-  net.send({t:'hp', id:S.me.id, hp:S.me.hp, alive:true});
+  S.shieldUntil = now() + CFG.shieldMs;
+  paintHP(); paintAmmo(); SFX.spawn();
+  banner('AKTIF', `kebal ${(CFG.shieldMs/1000).toFixed(1).replace('.',',')} detik`);
+  net.send({t:'hp', id:S.me.id, hp:S.me.hp, alive:true, prot:true});
+  setTimeout(()=>{
+    S.shieldUntil=0; paintHP();
+    net.send({t:'hp', id:S.me.id, hp:S.me.hp, alive:S.me.alive, prot:false});
+  }, CFG.shieldMs);
 }
 function reload(){
   if(S.reloading || S.ammo===CFG.mag) return;
@@ -1427,6 +1445,7 @@ function loop(t){
     $('#lockName').textContent = S.lock ? S.lock.name : '';
     if(S.mode==='body' && t-(AI.last||0)>110){ AI.last=t; runDetect(); }
     if(S.mode==='body') drawFigures();
+    if(S.shieldUntil && now()>=S.shieldUntil){ S.shieldUntil=0; paintHP(); }
     if(S.mode==='band' || S.mode==='body') paintCal();
     paintDiag();
     if(S.mode==='field' && !S.pos && !S.gpsWarned && t-S.roundT>8000){
@@ -1443,7 +1462,8 @@ function loop(t){
 async function startRound(){
   try{ ac().resume(); }catch(e){}
   Object.assign(S.me,{hp:CFG.hp, alive:true, kills:0, deaths:0});
-  S.ammo=CFG.mag; S.reloading=false; S.started=true; feedLines=[];
+  S.ammo=CFG.mag; S.reloading=false; S.started=true; feedLines=[]; S.shieldUntil=0;
+  [...S.players.values()].forEach(p=>{ p.prot=false; });
   if(S.mode==='solo'){ S.players.clear(); }
   else { S.players.set(S.me.id, S.me); [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;}); }
   $('#meName').textContent=S.me.name;
