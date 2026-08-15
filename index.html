@@ -56,7 +56,7 @@ h1 em{font-style:normal;color:var(--hz);display:block}
 .btn .k{font-family:'Azeret Mono',monospace;font-size:12px;opacity:.6;margin-left:auto}
 .btn[disabled]{opacity:.4;pointer-events:none}
 
-.opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .opt{padding:12px 8px;border:1px solid var(--line2);background:#0F100C;text-align:center}
 .opt b{display:block;font-size:14px;margin-bottom:3px}
 .opt span{font-size:11px;color:var(--dim);line-height:1.3;display:block}
@@ -109,6 +109,17 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 .mark{position:absolute;border:2px solid;pointer-events:none;
   clip-path:polygon(0 0,34% 0,0 34%,0 0,100% 0,100% 34%,66% 0,100% 0,100% 100%,66% 100%,100% 66%,100% 100%,0 100%,0 66%,34% 100%,0 100%);
   transition:left .08s linear,top .08s linear,width .12s linear,height .12s linear}
+
+.bmark{position:absolute;border:2px solid var(--txt);pointer-events:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.35);
+  transition:left .1s linear,top .1s linear,width .1s linear,height .1s linear}
+.bmark::before,.bmark::after{content:"";position:absolute;left:-2px;right:-2px;height:16%;
+  border:inherit;border-width:2px 2px 0 2px}
+.bmark::after{bottom:0;top:auto;border-width:0 2px 2px 2px}
+.bmark span{position:absolute;top:-11px;left:-2px;font-family:'Azeret Mono',monospace;font-size:10px;
+  letter-spacing:.14em;padding:2px 6px;background:#0C0D0B;white-space:nowrap}
+.bmark.unknown{border-color:rgba(255,255,255,.35)}
+.bmark.unknown span{color:var(--dim)}
 
 /* HUD */
 .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;
@@ -238,6 +249,7 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
       <h3>Cara deteksi tembakan</h3>
       <div class="opts" id="modePick">
         <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>DALAM RUANGAN. Pakai pita warna.</span></button>
+        <button class="opt" data-mode="body" aria-pressed="false"><b>Badan</b><span>Deteksi orang + warna baju. Butuh unduh model.</span></button>
         <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>LUAR saja. GPS, jarak min. 10 m.</span></button>
         <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Target melayang.</span></button>
       </div>
@@ -396,6 +408,7 @@ const view = () => ({ w:$('#ar').clientWidth||innerWidth, h:$('#ar').clientHeigh
 const MODE_NOTE = {
   band:'Untuk main di dalam ruangan. Tiap orang pakai benda warna beda; bidik sampai bracket merah, lalu tembak. Bisa sampel warna aslinya di tengah ronde.',
   field:'Cuma jalan di LUAR RUANGAN. GPS nggak dapat sinyal di dalam rumah, dan pemain harus berpencar minimal 10 m — kalau berdekatan, arah antar-pemain cuma jadi angka acak.',
+  body:'Model deteksi orang jalan di HP-mu: yang dilacak badan lawan, bukan warna. Warna baju cuma dipakai buat membedakan siapa. Sekali unduh model ~6 MB, butuh internet di awal ronde.',
   solo:'Tanpa teman, tanpa jaringan. Drone target melayang di layar buat kalibrasi rasa tembakannya.'
 };
 $('#modeNote').textContent = MODE_NOTE.band;
@@ -731,6 +744,17 @@ const samp=document.createElement('canvas'); samp.width=samp.height=16;
 const pctx=samp.getContext('2d',{willReadFrequently:true});
 function sampleColor(bandKey, label){
   const v=$('#cam'); if(!v.videoWidth) return;
+  if(S.mode==='body'){
+    const cx=innerWidth/2, cy=innerHeight/2;
+    const b=AI.boxes.find(b=>cx>b.x&&cx<b.x+b.w&&cy>b.y&&cy<b.y+b.h);
+    if(!b) return toast('Arahkan crosshair ke badan orangnya dulu.');
+    const c=meanHS(b.nb.x+b.nb.w*0.30, b.nb.y+b.nb.h*0.18, b.nb.w*0.40, b.nb.h*0.26);
+    if(!c || c.sat<.16) return toast('Baju itu terlalu kusam buat dibedakan.');
+    S.cal[bandKey]={hue:Math.round(c.hue), sat:c.sat};
+    net.send({t:'cal', band:bandKey, hue:Math.round(c.hue), sat:c.sat});
+    SFX.reload(); buzz(20); toast(`Baju ${label} dikunci di hue ${Math.round(c.hue)}°.`); paintCal();
+    return;
+  }
   const w=v.videoWidth, h=v.videoHeight, box=Math.min(w,h)*0.13;
   pctx.drawImage(v, (w-box)/2, (h-box)/2, box, box, 0,0,16,16);
   const d=pctx.getImageData(0,0,16,16).data;
@@ -751,14 +775,16 @@ function sampleColor(bandKey, label){
 }
 function paintCal(){
   const bar=$('#calbar');
-  if(S.mode!=='band'){ bar.hidden=true; return; }
+  if(S.mode!=='band' && S.mode!=='body'){ bar.hidden=true; return; }
   const foes=[...S.players.values()].filter(p=>p.id!==S.me.id);
   bar.hidden = !foes.length;
   bar.innerHTML = foes.map(p=>{
-    const n=S.blob[p.band]||0, c=S.cal[p.band];
+    const c=S.cal[p.band];
     const swatch = c ? `hsl(${c.hue} 90% 50%)` : bandOf(p.band).hex;
-    const tail = c ? `<b>${n}</b>px` : `<em>tap = sampel</em>`;
-    return `<button class="cal${n>=CFG.minBlob?' hot':''}" data-band="${p.band}" data-nm="${p.name}"
+    const seen = S.mode==='body' ? AI.boxes.some(b=>b.p && b.p.id===p.id) : (S.blob[p.band]||0)>=CFG.minBlob;
+    const tail = !c ? `<em>tap = sampel</em>`
+      : S.mode==='body' ? (seen?`<b>terlihat</b>`:`hilang`) : `<b>${S.blob[p.band]||0}</b>px`;
+    return `<button class="cal${seen?' hot':''}" data-band="${p.band}" data-nm="${p.name}"
       style="border-left-color:${swatch}"><i style="background:${swatch}"></i>${p.name} ${tail}</button>`;
   }).join('');
 }
@@ -788,6 +814,9 @@ function paintDiag(){
       if(!p.lat){ L.push(`${p.name}: no gps`); continue; }
       L.push(`${p.name}: ${distM(S.pos,p).toFixed(0)}m  off ${angDiff(bearing(S.pos,p),S.heading).toFixed(0)}°`);
     }
+  } else if(S.mode==='body'){
+    L.push(AI.ready ? `deteksi ${AI.ms}ms · ${AI.boxes.length} orang di frame` : 'model belum siap');
+    L.push('tap chip = sampel baju orang di crosshair');
   } else if(S.mode==='band'){
     L.push(`butuh ${CFG.minBlob}px + gumpalan padat buat lock`);
     L.push(`tap chip = sampel warna · tahan 0,7s = hapus`);
@@ -795,6 +824,96 @@ function paintDiag(){
   $('#diag').innerHTML=L.map(x=>`<b>${x}</b>`).join('\n');
 }
 $('#score').addEventListener('click', ()=>{ S.diag=!S.diag; paintDiag(); });
+
+/* ---------------- person detection (body mode) ----------------
+   coco-ssd finds the human; the torso's colour only decides *which* human.
+   That split is why this beats pure colour tracking: the colour search can
+   never wander outside a body box, so wood/skin/curtains are out of play. */
+const AI={ ready:false, model:null, busy:false, boxes:[], t:0, ms:0 };
+const det=document.createElement('canvas'); det.width=320; det.height=240;
+const dctx=det.getContext('2d',{willReadFrequently:true});
+
+function loadScript(src){ return new Promise((res,rej)=>{
+  const el=document.createElement('script'); el.src=src; el.onload=res; el.onerror=rej; document.head.append(el); }); }
+
+async function loadDetector(){
+  if(AI.ready) return true;
+  try{
+    if(!window.tf) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+    if(!window.cocoSsd) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js');
+    AI.model = await cocoSsd.load({base:'lite_mobilenet_v2'});
+    AI.ready = true; return true;
+  }catch(e){ return false; }
+}
+function meanHS(nx,ny,nw,nh){
+  const v=$('#cam'), vw=v.videoWidth, vh=v.videoHeight;
+  pctx.drawImage(v, nx*vw, ny*vh, Math.max(2,nw*vw), Math.max(2,nh*vh), 0,0,16,16);
+  const d=pctx.getImageData(0,0,16,16).data;
+  let sx=0, sy=0, ss=0, n=0;
+  for(let i=0;i<d.length;i+=4){
+    const [hu,sa,va]=rgb2hs(d[i],d[i+1],d[i+2]);
+    if(va<.15) continue;
+    const r=rad(hu); sx+=Math.cos(r); sy+=Math.sin(r); ss+=sa; n++;
+  }
+  if(!n) return null;
+  return { hue:(Math.atan2(sy/n,sx/n)*180/Math.PI+360)%360, sat:ss/n };
+}
+function identify(nb){
+  // sample the shirt: middle of the upper half of the body box
+  const c = meanHS(nb.x+nb.w*0.30, nb.y+nb.h*0.18, nb.w*0.40, nb.h*0.26);
+  if(!c || c.sat<.16) return null;
+  let best=null;
+  for(const p of S.players.values()){
+    if(p.id===S.me.id) continue;
+    const cal=S.cal[p.band], hue = cal ? cal.hue : bandOf(p.band).hue;
+    const d = angDiff(c.hue, hue);
+    if(d<42 && (!best || d<best.d)) best={p, d};
+  }
+  return best ? best.p : null;
+}
+async function runDetect(){
+  if(!AI.ready || AI.busy) return;
+  const v=$('#cam'); if(!v.videoWidth) return;
+  AI.busy=true;
+  const t0=now();
+  try{
+    dctx.drawImage(v,0,0,det.width,det.height);
+    const raw = await AI.model.detect(det, 6, 0.45);
+    const next=[];
+    for(const o of raw){
+      if(o.class!=='person') continue;
+      const nb={ x:o.bbox[0]/det.width, y:o.bbox[1]/det.height,
+                 w:o.bbox[2]/det.width, h:o.bbox[3]/det.height };
+      const [x0,y0]=videoToScreen(nb.x, nb.y);
+      const [x1,y1]=videoToScreen(nb.x+nb.w, nb.y+nb.h);
+      const p=identify(nb);
+      const box={ p, nb, x:x0, y:y0, w:x1-x0, h:y1-y0, score:o.score };
+      const prev = AI.boxes.find(b => b.p && p && b.p.id===p.id);
+      if(prev){ const a=.5;
+        box.x=prev.x+(box.x-prev.x)*a; box.y=prev.y+(box.y-prev.y)*a;
+        box.w=prev.w+(box.w-prev.w)*a; box.h=prev.h+(box.h-prev.h)*a; }
+      next.push(box);
+    }
+    AI.boxes=next; AI.t=now(); AI.ms=Math.round(now()-t0);
+  }catch(e){ /* keep last frame's boxes */ }
+  AI.busy=false;
+}
+function paintBodyMarks(){
+  const fresh = now()-AI.t < 900;
+  const keep=new Set();
+  AI.boxes.forEach((b,i)=>{
+    const key='b'+i; keep.add(key);
+    let m=S.marks.get(key);
+    if(!m){ m=document.createElement('div'); m.className='bmark';
+      m.innerHTML='<span></span>'; $('#fx').append(m); S.marks.set(key,m); }
+    m.classList.toggle('unknown', !b.p);
+    m.style.opacity = fresh ? 1 : .4;
+    m.style.left=b.x+'px'; m.style.top=b.y+'px'; m.style.width=b.w+'px'; m.style.height=b.h+'px';
+    if(b.p) m.style.borderColor = S.cal[b.p.band] ? `hsl(${S.cal[b.p.band].hue} 90% 55%)` : bandOf(b.p.band).hex;
+    m.firstChild.textContent = b.p ? b.p.name : 'ORANG ?';
+  });
+  S.marks.forEach((m,k)=>{ if(k[0]==='b' && !keep.has(k)){ m.remove(); S.marks.delete(k); } });
+}
 
 /* ---------------- solo drone ---------------- */
 function spawnDrone(){
@@ -829,6 +948,15 @@ function acquire(){
     const on=hits.filter(h=>h.p && !h.stale &&
         Math.abs(h.x-cx) <= h.w/2+pad && Math.abs(h.y-cy) <= h.h/2+pad)
       .sort((a,b)=>b.n-a.n)[0];
+    return on ? {id:on.p.id, name:on.p.name} : null;
+  }
+  if(S.mode==='body'){
+    paintBodyMarks();
+    if(now()-AI.t > 900) return null;
+    const pad=10;
+    const on = AI.boxes.filter(b => b.p &&
+        cx > b.x-pad && cx < b.x+b.w+pad && cy > b.y-pad && cy < b.y+b.h+pad)
+      .sort((a,b)=>(a.w*a.h)-(b.w*b.h))[0];
     return on ? {id:on.p.id, name:on.p.name} : null;
   }
   // field
@@ -920,7 +1048,8 @@ function loop(t){
     S.lock = S.me.alive ? acquire() : null;
     $('#ret').classList.toggle('lock', !!S.lock);
     $('#lockName').textContent = S.lock ? S.lock.name : '';
-    if(S.mode==='band') paintCal();
+    if(S.mode==='body' && t-(AI.last||0)>170){ AI.last=t; runDetect(); }
+    if(S.mode==='band' || S.mode==='body') paintCal();
     paintDiag();
     if(S.mode==='field' && !S.pos && !S.gpsWarned && t-S.roundT>8000){
       S.gpsWarned=true; banner('GPS MATI','mode lapangan butuh sinyal langit', true);
@@ -946,6 +1075,11 @@ async function startRound(){
   try{ await startCam(); }
   catch(e){ show('s-boot'); $('#ar').classList.remove('on');
     return toast('Kamera ditolak. Butuh HTTPS + izin kamera.', 4200); }
+  if(S.mode==='body'){
+    banner('MEMUAT MODEL','sekali unduh, ±6 MB', true);
+    const ok=await loadDetector();
+    if(!ok){ S.mode='band'; toast('Model gagal diunduh — balik ke mode Pita.', 5000); }
+  }
   if(S.mode==='field') await startSensors();
   if(S.mode==='solo') spawnDrone();
   S.gpsWarned=false; S.roundT=performance.now(); S.blob={}; paintCal(); paintDiag();
