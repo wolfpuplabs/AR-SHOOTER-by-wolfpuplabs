@@ -31,7 +31,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .clip{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
 
 /* ---------- screens ---------- */
-.screen{position:fixed;inset:0;display:none;flex-direction:column;z-index:10}
+.screen{position:fixed;left:0;right:0;top:var(--vtop,0px);height:var(--vh,100dvh);
+  display:none;flex-direction:column;z-index:10}
 .screen.on{display:flex}
 .scroll{flex:1;overflow-y:auto;padding:22px 20px calc(28px + var(--pad));-webkit-overflow-scrolling:touch}
 
@@ -84,8 +85,9 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
   letter-spacing:.14em;color:var(--hz);line-height:1}
 
 /* ---------- AR view ---------- */
-#ar{position:fixed;inset:0;background:#000;z-index:5;display:none}
+#ar{position:fixed;left:0;right:0;top:var(--vtop,0px);height:var(--vh,100dvh);background:#000;z-index:5;display:none}
 #ar.on{display:block}
+#ar,.screen{overflow:hidden}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #scan{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 #fx{position:absolute;inset:0;pointer-events:none}
@@ -113,8 +115,8 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
   padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(14px + var(--pad))}
 .hud > *{pointer-events:auto}
 .top{display:flex;gap:10px;align-items:flex-start}
-.plate{background:var(--glass);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-  border:1px solid var(--line2);padding:9px 12px}
+.plate{background:rgba(10,11,8,.78);border:1px solid var(--line2);padding:9px 12px}
+.hud{padding-top:max(12px, env(safe-area-inset-top,0px))}
 .hp{flex:1;max-width:260px}
 .hp .lbl{display:flex;justify-content:space-between;font-family:'Azeret Mono',monospace;font-size:10px;
   letter-spacing:.18em;color:var(--dim);margin-bottom:6px;text-transform:uppercase}
@@ -139,6 +141,14 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 .mini{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.14em;padding:11px 13px;
   background:var(--glass);border:1px solid var(--line2);text-transform:uppercase}
 
+#calbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cal{font-family:'Azeret Mono',monospace;font-size:10px;letter-spacing:.1em;padding:8px 10px;
+  background:rgba(10,11,8,.78);border:1px solid var(--line2);border-left:4px solid;text-transform:uppercase}
+.cal b{color:var(--hz);font-weight:700}
+.cal.hot{border-color:var(--ok);border-left-color:var(--ok)}
+#diag{font-family:'Azeret Mono',monospace;font-size:10px;line-height:1.7;margin-top:8px;color:var(--dim);white-space:pre}
+#diag b{color:var(--txt);font-weight:400}
+
 /* full-screen feedback layers */
 #flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(120% 90% at 50% 50%,transparent 42%,var(--hit) 100%)}
 #flash.on{animation:hurt .42s ease-out}
@@ -153,7 +163,8 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 #banner span{display:block;font-family:'Azeret Mono',monospace;font-size:12px;letter-spacing:.3em;color:var(--dim)}
 @keyframes bn{0%{opacity:0;transform:scale(1.15)}18%{opacity:1;transform:scale(1)}72%{opacity:1}100%{opacity:0}}
 
-.toast{position:fixed;left:14px;right:14px;bottom:calc(18px + var(--pad));z-index:60;background:var(--hz);
+.toast{position:fixed;left:14px;right:14px;z-index:60;
+  top:calc(var(--vtop,0px) + var(--vh,100dvh) - 104px);background:var(--hz);
   color:#0C0D0B;padding:14px 16px;font-weight:600;font-size:14px;transform:translateY(140%);
   transition:transform .28s cubic-bezier(.2,.9,.3,1)}
 .toast.on{transform:none}
@@ -190,11 +201,17 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
       <div class="plate" id="score">memuat…</div>
     </div>
     <div class="mid">
-      <div id="feed"></div>
+      <div>
+        <div id="feed"></div>
+        <div id="diag" class="plate" style="margin-top:8px;font-family:'Azeret Mono',monospace;font-size:10px;line-height:1.7;letter-spacing:.06em;color:var(--dim)"></div>
+      </div>
       <canvas id="radar" width="192" height="192" hidden></canvas>
     </div>
+    <div id="calbar" hidden></div>
+    <div class="plate" id="diag" hidden></div>
     <div class="bot">
       <div id="ammo">12<small>/12</small></div>
+      <button class="mini" id="btnCal" hidden>KALIBRASI</button>
       <button class="mini" id="btnReload">ISI ULANG</button>
       <button class="mini" id="btnQuit">KELUAR</button>
       <button class="fire" id="btnFire">TEMBAK</button>
@@ -213,8 +230,8 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
     <div class="card clip">
       <h3>Cara deteksi tembakan</h3>
       <div class="opts" id="modePick">
-        <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>Dalam ruangan. Tiap orang pakai pita warna.</span></button>
-        <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>Outdoor. Pakai GPS + kompas.</span></button>
+        <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>DALAM RUANGAN. Pakai pita warna.</span></button>
+        <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>LUAR saja. GPS, jarak min. 10 m.</span></button>
         <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Target melayang.</span></button>
       </div>
       <p class="note" id="modeNote"></p>
@@ -253,6 +270,11 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
     <div class="card clip">
       <h3>Pemain <span id="pcount"></span></h3>
       <div id="roster"></div>
+    </div>
+    <div class="card clip">
+      <h3>Mode ronde</h3>
+      <div class="row" style="border:0"><span class="nm" id="lobbyMode">—</span></div>
+      <p class="note" id="lobbyModeNote" style="margin:0"></p>
     </div>
     <div class="card clip">
       <h3>Aturan ronde</h3>
@@ -298,7 +320,7 @@ const BANDS = [
   { k:'c4', nm:'ORANYE',  hex:'#FF7A00', hue: 28, sat:.55 }
 ];
 const CFG = { hp:100, dmg:25, mag:12, reloadMs:1600, fireMs:260, respawnMs:5000,
-              winKills:10, lockPx:96, minBlob:14, fovDeg:14, rangeM:45 };
+              winKills:10, lockPx:96, minBlob:14, fovDeg:14, rangeM:45, minRangeM:8 };
 
 const S = {
   mode:'band', isHost:false, code:'', started:false,
@@ -306,7 +328,8 @@ const S = {
   players:new Map(),            // id -> player
   ammo:CFG.mag, reloading:false, lastShot:0,
   lock:null, marks:new Map(),
-  heading:0, pos:null, drone:null, raf:0, scanT:0, posT:0
+  heading:0, pos:null, drone:null, raf:0, scanT:0, posT:0,
+  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0
 };
 
 /* ---------------- helpers ---------------- */
@@ -347,10 +370,23 @@ const SFX = {
   spawn(){ tone(400,900,.22,'triangle',.16); }
 };
 
+/* ---------------- viewport ---------------- */
+function fitViewport(){
+  const vv=window.visualViewport;
+  const h=vv?vv.height:innerHeight, t=vv?vv.offsetTop:0;
+  const r=document.documentElement.style;
+  r.setProperty('--vh', h+'px'); r.setProperty('--vtop', t+'px');
+}
+fitViewport();
+addEventListener('resize', fitViewport); addEventListener('orientationchange', ()=>setTimeout(fitViewport,300));
+if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport);
+  visualViewport.addEventListener('scroll', fitViewport); }
+const view = () => ({ w:$('#ar').clientWidth||innerWidth, h:$('#ar').clientHeight||innerHeight });
+
 /* ---------------- boot UI ---------------- */
 const MODE_NOTE = {
-  band:'Deteksi warna lewat kamera. Bidik pita lawan sampai bracket-nya merah, lalu tembak. Maksimal 4 pemain, butuh cahaya cukup.',
-  field:'Pakai GPS + kompas: kena kalau kamu menghadap lawan (±14°) dalam jarak 45 m. Cuma akurat di luar ruangan, area terbuka.',
+  band:'Untuk main di dalam ruangan. Tiap orang pakai benda warna beda; bidik sampai bracket merah, lalu tembak. Bisa sampel warna aslinya di tengah ronde.',
+  field:'Cuma jalan di LUAR RUANGAN. GPS nggak dapat sinyal di dalam rumah, dan pemain harus berpencar minimal 10 m — kalau berdekatan, arah antar-pemain cuma jadi angka acak.',
   solo:'Tanpa teman, tanpa jaringan. Drone target melayang di layar buat kalibrasi rasa tembakannya.'
 };
 $('#modeNote').textContent = MODE_NOTE.band;
@@ -377,13 +413,36 @@ $('#btnJoin').onclick = ()=>{ const c=$('#inCode').value.trim().toUpperCase();
   if(c.length!==4) return toast('Kode arena 4 huruf.'); net.join(c); };
 $('#btnSolo').onclick = ()=>{ S.isHost=true; startRound(); };
 $('#btnLeave').onclick = ()=>{ net.close(); show('s-boot'); };
-$('#btnStart').onclick = ()=>{ if(S.players.size<2 && S.mode!=='solo') return toast('Minimal 2 pemain.');
+$('#btnStart').onclick = async ()=>{
+  if(S.players.size<2 && S.mode!=='solo') return toast('Minimal 2 pemain.');
+  if(S.mode==='field'){
+    const ok = await gpsCheck();
+    if(!ok) return;
+  }
   net.send({t:'start', mode:S.mode}); startRound(); };
+function gpsCheck(){
+  return new Promise(res=>{
+    if(!navigator.geolocation){ toast('HP ini tidak punya GPS. Pakai mode Pita.',5000); return res(false); }
+    toast('Cek GPS…',2000);
+    navigator.geolocation.getCurrentPosition(p=>{
+      const a=p.coords.accuracy;
+      if(a>30){ toast(`GPS meleset ±${Math.round(a)} m — terlalu kasar untuk saling bidik. Keluar ruangan, atau pakai mode Pita.`,6000); return res(false); }
+      res(true);
+    }, e=>{ toast(e.code===1?'Izin lokasi ditolak. Aktifkan lokasi untuk Safari/Chrome, atau pakai mode Pita.'
+                            :'Sinyal GPS tidak ada — mode Lapangan cuma jalan di luar ruangan. Pakai mode Pita.',6000);
+            res(false); }, {enableHighAccuracy:true, timeout:9000});
+  });
+}
 $('#btnHome').onclick = ()=>{ net.close(); show('s-boot'); };
 $('#btnAgain').onclick = ()=>{ [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
   if(S.isHost){ net.send({t:'start', mode:S.mode}); startRound(); } else show('s-lobby'); };
 
 /* ---------------- roster ---------------- */
+function paintLobbyMode(){
+  const nm={band:'PITA WARNA',field:'LAPANGAN (GPS)',solo:'LATIHAN'}[S.mode];
+  $('#lobbyMode').textContent = nm + (S.isHost?'' : ' · ditentukan host');
+  $('#lobbyModeNote').textContent = MODE_NOTE[S.mode];
+}
 function paintRoster(){
   const list = S.players.size ? [...S.players.values()] : [S.me];
   $('#pcount').textContent = `${list.length}/4`;
@@ -404,7 +463,7 @@ const net = {
     S.isHost=true; S.code=codeGen();
     S.me.id='H'+S.code;
     S.players.clear(); S.players.set(S.me.id, S.me);
-    $('#lobbyCode').textContent=S.code; paintRoster(); show('s-lobby');
+    $('#lobbyCode').textContent=S.code; paintRoster(); paintLobbyMode(); show('s-lobby');
     $('#netNote').textContent='Menghubungkan ke broker…';
     this.peer = new Peer('tanda-'+S.code+'-h');
     this.peer.on('open', ()=> $('#netNote').textContent='Arena siap. Kode aktif selama tab ini terbuka.');
@@ -419,7 +478,7 @@ const net = {
   },
   join(code){
     S.isHost=false; S.code=code; S.me.id='P'+Math.random().toString(36).slice(2,7).toUpperCase();
-    $('#lobbyCode').textContent=code; show('s-lobby');
+    $('#lobbyCode').textContent=code; paintLobbyMode(); show('s-lobby');
     $('#netNote').textContent='Mencari arena…';
     this.peer = new Peer();
     this.peer.on('open', ()=>{
@@ -442,14 +501,17 @@ function handle(d){
   switch(d.t){
     case 'hello':
       S.players.set(d.p.id, {...d.p});
-      if(S.isHost) net.send({t:'roster', list:[...S.players.values()].map(pub)});
+      if(S.isHost){ net.send({t:'roster', list:[...S.players.values()].map(pub)});
+                    net.send({t:'mode', mode:S.mode}); }
       paintRoster(); break;
+    case 'mode': S.mode=d.mode; paintLobbyMode(); break;
     case 'roster':
       d.list.forEach(p=>{ const ex=S.players.get(p.id); S.players.set(p.id, ex?{...ex,...p}:{...p}); });
       S.players.set(S.me.id, S.me); paintRoster(); break;
     case 'start': S.mode=d.mode; startRound(); break;
     case 'pos': { const p=S.players.get(d.id); if(p){ p.lat=d.lat; p.lng=d.lng; p.head=d.head; } break; }
     case 'hit': if(d.to===S.me.id) takeHit(d.by); break;
+    case 'hitok': if(d.by===S.me.id){ SFX.hitmark(); buzz([10,30,10]); banner('KENA','-'+CFG.dmg); } break;
     case 'tagged': {
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
@@ -495,7 +557,7 @@ async function startCam(){
   try{ wake = await navigator.wakeLock.request('screen'); }catch(e){}
 }
 function stopAR(){
-  cancelAnimationFrame(S.raf); S.raf=0;
+  cancelAnimationFrame(S.raf); S.raf=0; stopSensors();
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   if(wake){ try{wake.release();}catch(e){} wake=null; }
   $('#ar').classList.remove('on');
@@ -504,6 +566,8 @@ function stopAR(){
 }
 
 /* ---------------- sensors (field mode) ---------------- */
+let geoWatch=null;
+function stopSensors(){ if(geoWatch!=null){ navigator.geolocation.clearWatch(geoWatch); geoWatch=null; } S.pos=null; }
 async function startSensors(){
   if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission){
     try{ await DeviceOrientationEvent.requestPermission(); }catch(e){}
@@ -514,8 +578,12 @@ async function startSensors(){
   };
   window.addEventListener('deviceorientationabsolute', onOri, true);
   window.addEventListener('deviceorientation', onOri, true);
-  navigator.geolocation.watchPosition(p=>{ S.pos={lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy}; },
-    ()=>toast('GPS tidak aktif — mode lapangan butuh lokasi.'), {enableHighAccuracy:true, maximumAge:1000});
+  stopSensors();
+  geoWatch = navigator.geolocation.watchPosition(
+    p=>{ S.pos={lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy}; },
+    e=>{ S.geoErr = e.code===1?'izin lokasi ditolak':'sinyal GPS tidak ada';
+         toast('Mode lapangan butuh GPS: '+S.geoErr+'. Ganti ke mode Pita untuk main di dalam ruangan.', 5000); },
+    {enableHighAccuracy:true, maximumAge:1000, timeout:8000});
 }
 const R=6371000, rad=d=>d*Math.PI/180;
 function distM(a,b){ const dφ=rad(b.lat-a.lat), dλ=rad(b.lng-a.lng), φ1=rad(a.lat), φ2=rad(b.lat);
@@ -534,7 +602,7 @@ function rgb2hs(r,g,b){
   return [(h+360)%360, mx?d/mx:0, mx];
 }
 function videoToScreen(nx,ny){
-  const v=$('#cam'), sw=innerWidth, sh=innerHeight;
+  const v=$('#cam'), {w:sw,h:sh}=view();
   const vw=v.videoWidth||1280, vh=v.videoHeight||720;
   const k=Math.max(sw/vw, sh/vh);
   return [ (sw-vw*k)/2 + nx*vw*k, (sh-vh*k)/2 + ny*vh*k ];
@@ -550,14 +618,17 @@ function scanFrame(){
     const [h,s,val]=rgb2hs(d[i],d[i+1],d[i+2]);
     if(val<.26) continue;
     for(const [k,a] of acc){
-      const b=bandOf(k);
-      if(s>=b.sat && angDiff(h,b.hue)<15){
+      const c=S.cal[k], b=bandOf(k);
+      const hue = c ? c.hue : b.hue, sat = c ? Math.max(.18, c.sat*.55) : b.sat, tol = c ? 20 : 15;
+      if(s>=sat && angDiff(h,hue)<tol){
         a.n++; a.x += px%scan.width; a.y += (px/scan.width)|0; break;
       }
     }
   }
   const out=[];
+  S.blob={};
   for(const [k,a] of acc){
+    S.blob[k]=a.n;
     if(a.n < CFG.minBlob) continue;
     const [sx,sy]=videoToScreen((a.x/a.n)/scan.width, (a.y/a.n)/scan.height);
     out.push({p:a.p, x:sx, y:sy, n:a.n, band:k});
@@ -575,6 +646,64 @@ function paintMarks(hits){
   S.marks.forEach((m,k)=>{ if(!seen.has(k)){ m.remove(); S.marks.delete(k); } });
 }
 
+/* ---------------- colour calibration (band mode) ---------------- */
+const samp=document.createElement('canvas'); samp.width=samp.height=16;
+const pctx=samp.getContext('2d',{willReadFrequently:true});
+function sampleColor(bandKey, label){
+  const v=$('#cam'); if(!v.videoWidth) return;
+  const w=v.videoWidth, h=v.videoHeight, box=Math.min(w,h)*0.13;
+  pctx.drawImage(v, (w-box)/2, (h-box)/2, box, box, 0,0,16,16);
+  const d=pctx.getImageData(0,0,16,16).data;
+  let sx=0, sy=0, ss=0, sv=0, n=0;
+  for(let i=0;i<d.length;i+=4){
+    const [hu,sa,va]=rgb2hs(d[i],d[i+1],d[i+2]);
+    if(va<.15) continue;
+    const r=rad(hu); sx+=Math.cos(r); sy+=Math.sin(r); ss+=sa; sv+=va; n++;
+  }
+  if(!n) return toast('Terlalu gelap buat disampel.');
+  const hue=(Math.atan2(sy/n, sx/n)*180/Math.PI+360)%360, sat=ss/n;
+  if(sat<.22) return toast('Warnanya terlalu pudar — pakai benda yang lebih ngejreng.');
+  S.cal[bandKey]={hue:Math.round(hue), sat};
+  SFX.reload(); buzz(20);
+  toast(`Warna ${label} dikunci di hue ${Math.round(hue)}°.`);
+  paintCal();
+}
+function paintCal(){
+  const bar=$('#calbar');
+  if(S.mode!=='band'){ bar.hidden=true; return; }
+  const foes=[...S.players.values()].filter(p=>p.id!==S.me.id);
+  bar.hidden = !foes.length;
+  bar.innerHTML = foes.map(p=>{
+    const n=S.blob[p.band]||0;
+    return `<button class="cal${n>=CFG.minBlob?' hot':''}" data-band="${p.band}" data-nm="${p.name}"
+      style="border-left-color:${S.cal[p.band]?'#A6FF00':bandOf(p.band).hex}">${p.name} <b>${n}</b>px</button>`;
+  }).join('');
+}
+$('#calbar').addEventListener('click', e=>{
+  const b=e.target.closest('.cal'); if(!b) return;
+  sampleColor(b.dataset.band, b.dataset.nm);
+});
+
+/* ---------------- diagnostics ---------------- */
+function paintDiag(){
+  if(!S.diag){ $('#diag').hidden=true; return; }
+  $('#diag').hidden=false;
+  const L=[`mode ${S.mode}  ping-mates ${S.players.size}`];
+  if(S.mode==='field'){
+    L.push(S.pos ? `gps ±${Math.round(S.pos.acc)}m  arah ${Math.round(S.heading)}°`
+                 : `gps BELUM DAPAT FIX — mode ini mati`);
+    for(const p of S.players.values()){
+      if(p.id===S.me.id) continue;
+      if(!p.lat){ L.push(`${p.name}: no gps`); continue; }
+      L.push(`${p.name}: ${distM(S.pos,p).toFixed(0)}m  off ${angDiff(bearing(S.pos,p),S.heading).toFixed(0)}°`);
+    }
+  } else if(S.mode==='band'){
+    L.push(`butuh ${CFG.minBlob}px buat lock  ·  tap chip = sampel warna`);
+  }
+  $('#diag').innerHTML=L.map(x=>`<b>${x}</b>`).join('\n');
+}
+$('#score').addEventListener('click', ()=>{ S.diag=!S.diag; paintDiag(); });
+
 /* ---------------- solo drone ---------------- */
 function spawnDrone(){
   const el=document.createElement('div');
@@ -587,15 +716,16 @@ function spawnDrone(){
 }
 function moveDrone(dt){
   const d=S.drone; if(!d) return; d.t+=dt/1000;
-  d.x = innerWidth*(.5+.34*Math.sin(d.t*d.ax*2));
-  d.y = innerHeight*(.45+.22*Math.sin(d.t*d.ay*3.1));
+  const vb=view();
+  d.x = vb.w*(.5+.34*Math.sin(d.t*d.ax*2));
+  d.y = vb.h*(.45+.22*Math.sin(d.t*d.ay*3.1));
   d.el.style.left=d.x+'px'; d.el.style.top=d.y+'px';
   d.el.style.opacity = d.hp/3*.6+.4;
 }
 
 /* ---------------- targeting + firing ---------------- */
 function acquire(){
-  const cx=innerWidth/2, cy=innerHeight/2;
+  const vb=view(), cx=vb.w/2, cy=vb.h/2;
   if(S.mode==='solo'){
     const d=S.drone;
     if(d && Math.hypot(d.x-cx, d.y-cy) < CFG.lockPx) return {name:'DRONE', drone:true};
@@ -613,7 +743,8 @@ function acquire(){
   for(const p of S.players.values()){
     if(p.id===S.me.id || !p.lat || p.alive===false) continue;
     const dist=distM(S.pos,p), br=bearing(S.pos,p), off=angDiff(br,S.heading);
-    if(dist<CFG.rangeM && off<CFG.fovDeg/2 && (!best||dist<best.dist)) best={id:p.id,name:p.name,dist,off};
+    if(dist>=CFG.minRangeM && dist<CFG.rangeM && off<CFG.fovDeg/2 && (!best||dist<best.dist))
+      best={id:p.id,name:p.name,dist,off};
   }
   return best;
 }
@@ -644,6 +775,7 @@ function takeHit(byId){
   SFX.hurt(); buzz([28,50,28]);
   $('#flash').classList.remove('on'); void $('#flash').offsetWidth; $('#flash').classList.add('on');
   net.send({t:'hp', id:S.me.id, hp:Math.max(0,S.me.hp), alive:S.me.hp>0});
+  net.send({t:'hitok', by:byId, to:S.me.id});
   if(S.me.hp<=0) down(byId);
 }
 function down(byId){
@@ -694,6 +826,12 @@ function loop(t){
     S.lock = S.me.alive ? acquire() : null;
     $('#ret').classList.toggle('lock', !!S.lock);
     $('#lockName').textContent = S.lock ? S.lock.name : '';
+    if(S.mode==='band') paintCal();
+    paintDiag();
+    if(S.mode==='field' && !S.pos && !S.gpsWarned && t-S.roundT>8000){
+      S.gpsWarned=true; banner('GPS MATI','mode lapangan butuh sinyal langit', true);
+      toast('Nggak ada fix GPS. Di dalam ruangan pakai mode Pita — keluar, lalu berpencar min. 10 m.', 6000);
+    }
     if(S.mode==='field'){ paintRadar();
       if(t-S.posT>500 && S.pos){ S.posT=t;
         net.send({t:'pos', id:S.me.id, lat:S.pos.lat, lng:S.pos.lng, head:S.heading}); } }
@@ -716,6 +854,7 @@ async function startRound(){
     return toast('Kamera ditolak. Butuh HTTPS + izin kamera.', 4200); }
   if(S.mode==='field') await startSensors();
   if(S.mode==='solo') spawnDrone();
+  S.gpsWarned=false; S.roundT=performance.now(); S.blob={}; paintCal(); paintDiag();
   banner('MULAI', S.mode==='band'?'bidik pita lawan':S.mode==='field'?'hadapkan HP ke lawan':'jatuhkan drone');
   last=performance.now(); S.raf=requestAnimationFrame(loop);
 }
