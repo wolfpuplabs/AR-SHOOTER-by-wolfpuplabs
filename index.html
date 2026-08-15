@@ -20,7 +20,7 @@
   --pad: env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--txt);
+html,body{height:100svh;overflow:hidden;background:var(--ink);color:var(--txt);
   font-family:'Bai Jamjuree',system-ui,sans-serif;overscroll-behavior:none}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 :focus-visible{outline:2px solid var(--hz);outline-offset:2px}
@@ -141,10 +141,13 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
 .mini{font-family:'Azeret Mono',monospace;font-size:11px;letter-spacing:.14em;padding:11px 13px;
   background:var(--glass);border:1px solid var(--line2);text-transform:uppercase}
 
+#ar.on ~ .toast{bottom:calc(126px + var(--pad))}
 #calbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .cal{font-family:'Azeret Mono',monospace;font-size:10px;letter-spacing:.1em;padding:8px 10px;
   background:rgba(10,11,8,.78);border:1px solid var(--line2);border-left:4px solid;text-transform:uppercase}
 .cal b{color:var(--hz);font-weight:700}
+.cal i{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:-1px;border-radius:2px}
+.cal em{font-style:normal;color:var(--hz);opacity:.8}
 .cal.hot{border-color:var(--ok);border-left-color:var(--ok)}
 #diag{font-family:'Azeret Mono',monospace;font-size:10px;line-height:1.7;margin-top:8px;color:var(--dim);white-space:pre}
 #diag b{color:var(--txt);font-weight:400}
@@ -240,9 +243,9 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
     <div class="card clip">
       <label class="f" for="inName">Nama panggilan</label>
       <input id="inName" maxlength="10" placeholder="KAMU">
-      <label class="f">Warna pita kamu</label>
+      <label class="f">Tanda warna kamu</label>
       <div class="bands" id="bandPick"></div>
-      <p class="note">Pakai pita, kaos, atau kertas warna ini di dada/topi. Lawan membidik warna itu, jadi <b>tiap orang harus beda warna</b>.</p>
+      <p class="note">Ini cuma <b>label identitas</b> — kamu nggak harus punya persis warna ini. Pakai benda apa pun yang warnanya ngejreng dan beda dari yang lain (handuk, tas, kaos, tutup botol), lalu di dalam ronde lawan tinggal tap chip namamu buat <b>menyampel warna aslinya</b>. Syaratnya cuma satu: <b>antar pemain jangan mirip</b>.</p>
     </div>
 
     <button class="btn clip" id="btnHost">Buka arena baru <span class="k">HOST</span></button>
@@ -298,6 +301,7 @@ label.f{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercas
     <h1 id="endTitle">Hasil</h1>
     <div class="card clip"><div id="endBoard"></div></div>
     <button class="btn clip" id="btnAgain">Main lagi</button>
+    <button class="btn ghost clip" id="btnLobby">Kembali ke ruang tunggu</button>
     <button class="btn ghost clip" id="btnHome">Kembali</button>
   </div>
   <div class="hazard thin"></div>
@@ -434,8 +438,12 @@ function gpsCheck(){
   });
 }
 $('#btnHome').onclick = ()=>{ net.close(); show('s-boot'); };
-$('#btnAgain').onclick = ()=>{ [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
-  if(S.isHost){ net.send({t:'start', mode:S.mode}); startRound(); } else show('s-lobby'); };
+$('#btnAgain').onclick = ()=>{
+  [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
+  if(S.mode==='solo' || S.isHost){ if(S.mode!=='solo') net.send({t:'start', mode:S.mode}); startRound(); }
+  else { net.send({t:'rematch', by:S.me.name}); toast('Minta host mulai ronde baru…'); show('s-lobby'); }
+};
+$('#btnLobby').onclick = ()=> show(S.mode==='solo' ? 's-boot' : 's-lobby');
 
 /* ---------------- roster ---------------- */
 function paintLobbyMode(){
@@ -521,6 +529,12 @@ function handle(d){
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
       break; }
     case 'hp': { const p=S.players.get(d.id); if(p){ p.hp=d.hp; p.alive=d.alive; } break; }
+    case 'rematch':
+      if(S.isHost){ toast(`${d.by} minta main lagi.`);
+        [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
+        net.send({t:'start', mode:S.mode}); startRound(); }
+      break;
+    case 'cal': if(!S.cal[d.band]) S.cal[d.band]={hue:d.hue, sat:d.sat}; break;
     case 'end': endRound(); break;
   }
 }
@@ -664,6 +678,7 @@ function sampleColor(bandKey, label){
   const hue=(Math.atan2(sy/n, sx/n)*180/Math.PI+360)%360, sat=ss/n;
   if(sat<.22) return toast('Warnanya terlalu pudar — pakai benda yang lebih ngejreng.');
   S.cal[bandKey]={hue:Math.round(hue), sat};
+  if(S.mode!=='solo') net.send({t:'cal', band:bandKey, hue:Math.round(hue), sat});
   SFX.reload(); buzz(20);
   toast(`Warna ${label} dikunci di hue ${Math.round(hue)}°.`);
   paintCal();
@@ -674,15 +689,25 @@ function paintCal(){
   const foes=[...S.players.values()].filter(p=>p.id!==S.me.id);
   bar.hidden = !foes.length;
   bar.innerHTML = foes.map(p=>{
-    const n=S.blob[p.band]||0;
+    const n=S.blob[p.band]||0, c=S.cal[p.band];
+    const swatch = c ? `hsl(${c.hue} 90% 50%)` : bandOf(p.band).hex;
+    const tail = c ? `<b>${n}</b>px` : `<em>tap = sampel</em>`;
     return `<button class="cal${n>=CFG.minBlob?' hot':''}" data-band="${p.band}" data-nm="${p.name}"
-      style="border-left-color:${S.cal[p.band]?'#A6FF00':bandOf(p.band).hex}">${p.name} <b>${n}</b>px</button>`;
+      style="border-left-color:${swatch}"><i style="background:${swatch}"></i>${p.name} ${tail}</button>`;
   }).join('');
 }
-$('#calbar').addEventListener('click', e=>{
+let calHold;
+$('#calbar').addEventListener('pointerdown', e=>{
   const b=e.target.closest('.cal'); if(!b) return;
+  calHold=setTimeout(()=>{ calHold=null; delete S.cal[b.dataset.band];
+    toast(`Sampel ${b.dataset.nm} dihapus.`); paintCal(); }, 700);
+});
+$('#calbar').addEventListener('pointerup', e=>{
+  const b=e.target.closest('.cal'); if(!b || !calHold) return;
+  clearTimeout(calHold); calHold=null;
   sampleColor(b.dataset.band, b.dataset.nm);
 });
+$('#calbar').addEventListener('pointercancel', ()=>{ clearTimeout(calHold); calHold=null; });
 
 /* ---------------- diagnostics ---------------- */
 function paintDiag(){
@@ -698,7 +723,8 @@ function paintDiag(){
       L.push(`${p.name}: ${distM(S.pos,p).toFixed(0)}m  off ${angDiff(bearing(S.pos,p),S.heading).toFixed(0)}°`);
     }
   } else if(S.mode==='band'){
-    L.push(`butuh ${CFG.minBlob}px buat lock  ·  tap chip = sampel warna`);
+    L.push(`butuh ${CFG.minBlob}px buat lock`);
+    L.push(`tap chip = sampel warna · tahan 0,7s = hapus`);
   }
   $('#diag').innerHTML=L.map(x=>`<b>${x}</b>`).join('\n');
 }
