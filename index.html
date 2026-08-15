@@ -130,6 +130,7 @@ input:focus{border-color:var(--peri);outline:none}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #scan{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 #fx{position:absolute;inset:0;pointer-events:none}
+#silo{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #vignette{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(120% 88% at 50% 46%,transparent 46%,rgba(0,0,0,.55) 100%)}
 
@@ -282,6 +283,7 @@ input:focus{border-color:var(--peri);outline:none}
   <video id="cam" playsinline muted autoplay></video>
   <canvas id="scan"></canvas>
   <div id="vignette"></div>
+  <canvas id="silo"></canvas>
   <div id="fx"></div>
   <div id="ret">
     <svg viewBox="0 0 120 120">
@@ -739,6 +741,8 @@ function stopAR(){
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   if(wake){ try{wake.release();}catch(e){} wake=null; }
   $('#ar').classList.remove('on');
+  try{ octx.clearRect(0,0,innerWidth,innerHeight); }catch(e){}
+  AI.figs=[]; tracks=[];
   S.marks.forEach(m=>m.remove()); S.marks.clear();
   if(S.drone){ S.drone.el.remove(); S.drone=null; }
 }
@@ -892,7 +896,9 @@ function sampleColor(bandKey, label){
   const v=$('#cam'); if(!v.videoWidth) return;
   if(S.mode==='body'){
     const cx=innerWidth/2, cy=innerHeight/2;
-    const b=AI.boxes.find(b=>cx>b.x&&cx<b.x+b.w&&cy>b.y&&cy<b.y+b.h);
+    const [nx,ny]=screenToVideo(cx,cy);
+    const b=AI.figs.find(f=>!f.faceOnly && (f.mask ? maskAt(f,nx,ny)
+      : (nx>f.nb.x&&nx<f.nb.x+f.nb.w&&ny>f.nb.y&&ny<f.nb.y+f.nb.h)));
     if(!b) return toast('Arahkan crosshair ke badan orangnya dulu.');
     const c=meanHS(b.nb.x+b.nb.w*0.30, b.nb.y+b.nb.h*0.20, b.nb.w*0.40, b.nb.h*0.28);
     if(!c || c.sat<.16) return toast('Baju itu terlalu kusam buat dibedakan.');
@@ -927,7 +933,7 @@ function paintCal(){
   bar.innerHTML = foes.map(p=>{
     const c=S.cal[p.band];
     const swatch = c ? `hsl(${c.hue} 90% 50%)` : bandOf(p.band).hex;
-    const seen = S.mode==='body' ? AI.boxes.some(b=>b.p && b.p.id===p.id) : (S.blob[p.band]||0)>=CFG.minBlob;
+    const seen = S.mode==='body' ? AI.figs.some(f=>f.p && f.p.id===p.id) : (S.blob[p.band]||0)>=CFG.minBlob;
     const tail = !c ? `<em>tap = sampel</em>`
       : S.mode==='body' ? (seen?`<b>terlihat</b>`:`hilang`) : `<b>${S.blob[p.band]||0}</b>px`;
     return `<button class="cal${seen?' hot':''}" data-band="${p.band}" data-nm="${p.name}"
@@ -961,10 +967,10 @@ function paintDiag(){
       L.push(`${p.name}: ${distM(S.pos,p).toFixed(0)}m  off ${angDiff(bearing(S.pos,p),S.heading).toFixed(0)}°`);
     }
   } else if(S.mode==='body'){
-    L.push(AI.ready ? `${AI.ms}ms/pass (${AI.gpu?'GPU':'CPU'}) · ${AI.boxes.length} badan · ${AI.heads.length} kepala`
+    L.push(AI.ready ? `${AI.ms}ms/pass (${AI.gpu?'GPU':'CPU'}) · ${AI.figs.length} figur · ${AI.figs.filter(f=>f.mask).length} siluet`
                     : ('model belum siap '+(AI.err?'· '+AI.err.slice(0,44):'')));
     if(AI.ready && AI.err) L.push('err: '+AI.err.slice(0,44));
-    const src=AI.heads.map(h=>h.src).join(',');
+    const src=AI.figs.filter(f=>f.head).map(f=>f.head.src).join(',');
     if(src) L.push('sumber kepala: '+src);
     L.push('tap chip = sampel baju orang di crosshair');
   } else if(S.mode==='band'){
@@ -983,19 +989,19 @@ $('#score').addEventListener('click', ()=>{ S.diag=!S.diag; paintDiag(); });
                      person is turned away, which is the whole point here
      3. torso box  — last resort anchor above the shoulders
    MoveNet replaces coco-ssd entirely: one model now yields body *and* head. */
-const AI={ ready:false, pose:null, face:null, busy:false, boxes:[], heads:[],
-           t:0, ms:0, last:0, ts:0, err:'', gpu:true };
+const AI={ ready:false, pose:null, face:null, busy:false, figs:[], t:0, ms:0, last:0, ts:0,
+           err:'', gpu:true, seg:true };
 const det=document.createElement('canvas'); det.width=320; det.height=240;
 const dctx=det.getContext('2d',{willReadFrequently:true});
-const smooth=new Map();
+const silo=$('#silo'), octx=silo.getContext('2d');
+const mcv=document.createElement('canvas'), mctx=mcv.getContext('2d');   // raw silhouette
+const ocv=document.createElement('canvas'), octx2=ocv.getContext('2d');  // silhouette outline
+let tracks=[];
 
 const MP_VER='1.0.1';
 const MP_POSE='https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 const MP_FACE='https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
 
-/* TF.js was the wrong horse: its models still resolve through tfhub.dev, which
-   now redirects to Kaggle with no CORS header, so the browser blocks the
-   download. MediaPipe serves its own weights with CORS intact. */
 async function loadDetector(){
   if(AI.ready) return true;
   for(const delegate of ['GPU','CPU']){
@@ -1004,8 +1010,8 @@ async function loadDetector(){
       const fs = await V.FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`);
       AI.pose = await V.PoseLandmarker.createFromOptions(fs, {
         baseOptions:{ modelAssetPath:MP_POSE, delegate },
-        runningMode:'VIDEO', numPoses:4,
-        minPoseDetectionConfidence:.4, minPosePresenceConfidence:.4, minTrackingConfidence:.4 });
+        runningMode:'VIDEO', numPoses:3, outputSegmentationMasks:true,
+        minPoseDetectionConfidence:.4, minPosePresenceConfidence:.4, minTrackingConfidence:.5 });
       AI.face = await V.FaceDetector.createFromOptions(fs, {
         baseOptions:{ modelAssetPath:MP_FACE, delegate },
         runningMode:'VIDEO', minDetectionConfidence:.5 });
@@ -1042,18 +1048,21 @@ function matchPlayer(c, tol=42){
   if(best) return best.p;
   return foes.length===1 ? foes[0] : null;
 }
-function toScreen(nb){
-  const [x0,y0]=videoToScreen(nb.x, nb.y), [x1,y1]=videoToScreen(nb.x+nb.w, nb.y+nb.h);
-  return { nb, x:x0, y:y0, w:x1-x0, h:y1-y0 };
+function videoToScreenPt(nx,ny){ return videoToScreen(nx,ny); }
+function screenToVideo(x,y){
+  const v=$('#cam'), sw=innerWidth, sh=innerHeight;
+  const vw=v.videoWidth||1280, vh=v.videoHeight||720, k=Math.max(sw/vw, sh/vh);
+  return [ (x-(sw-vw*k)/2)/(vw*k), (y-(sh-vh*k)/2)/(vh*k) ];
 }
-function ease(key, box, a=.45){
-  const prev=smooth.get(key);
-  if(prev && now()-prev.t<500){
-    box.x=prev.x+(box.x-prev.x)*a; box.y=prev.y+(box.y-prev.y)*a;
-    box.w=prev.w+(box.w-prev.w)*a; box.h=prev.h+(box.h-prev.h)*a;
-  }
-  smooth.set(key, {x:box.x, y:box.y, w:box.w, h:box.h, t:now()});
-  return box;
+
+/* Identity is sticky on purpose. A single bad colour sample used to make the
+   label (and the box) jump between players; now a rival reading has to win
+   several frames in a row before the figure changes hands. */
+function assignIdentity(tr, guess){
+  if(!guess) return;
+  if(!tr.p){ tr.p=guess; tr.conf=3; return; }
+  if(guess.id===tr.p.id) tr.conf=Math.min(9, tr.conf+1);
+  else if(--tr.conf<=0){ tr.p=guess; tr.conf=3; }
 }
 
 async function runDetect(){
@@ -1062,106 +1071,192 @@ async function runDetect(){
   AI.busy=true;
   const t0=now();
   try{
-    // keep the analysis canvas at the camera's aspect ratio, or every box skews
     const want=Math.round(320*v.videoHeight/v.videoWidth);
-    if(det.height!==want){ det.height=want; }
+    if(det.height!==want) det.height=want;
     dctx.drawImage(v,0,0,det.width,det.height);
     const DW=det.width, DH=det.height;
     const ts = AI.ts = Math.max(AI.ts+1, Math.round(now()));
 
     const pr = AI.pose.detectForVideo(det, ts);
     const fr = AI.face.detectForVideo(det, ts);
-    const bodies=[], heads=[];
+    const masks = pr.segmentationMasks || [];
+    const next=[];
 
     (pr.landmarks||[]).forEach((L, pi)=>{
       const P = i => L[i] ? { x:L[i].x*DW, y:L[i].y*DH, s:(L[i].visibility==null?1:L[i].visibility) } : null;
       const ok = L.map((_,i)=>P(i)).filter(p=>p && p.s>0.35);
       if(ok.length<5) return;
       const xs=ok.map(p=>p.x), ys=ok.map(p=>p.y);
-      const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
-      const px=(x1-x0)*0.12, py=(y1-y0)*0.06;
-      const bnb={ x:(x0-px)/DW, y:(y0-py)/DH, w:(x1-x0+px*2)/DW, h:(y1-y0+py*2)/DH };
+      const bx0=Math.min(...xs), bx1=Math.max(...xs), by0=Math.min(...ys), by1=Math.max(...ys);
+      const cx=(bx0+bx1)/2, cy=(by0+by1)/2;
 
-      const ls=P(11), rs=P(12), lh=P(23), rh=P(24);          // shoulders, hips
+      // carry identity across frames by nearest centroid
+      let tr = tracks.filter(t=>!t.used)
+        .map(t=>({t, d:Math.hypot(t.cx-cx, t.cy-cy)}))
+        .filter(o=>o.d < DW*0.22).sort((a,b)=>a.d-b.d)[0];
+      tr = tr ? tr.t : {p:null, conf:0};
+      tr.used=true; tr.cx=cx; tr.cy=cy;
+
+      const ls=P(11), rs=P(12), lh=P(23), rh=P(24);
       const sOK = ls&&rs&&ls.s>0.35&&rs.s>0.35;
       const shoulderW = sOK ? Math.hypot(ls.x-rs.x, ls.y-rs.y) : 0;
-
-      let who=null;
       if(sOK && shoulderW>6){
         const midx=(ls.x+rs.x)/2, topy=(ls.y+rs.y)/2;
         const boty = (lh&&rh&&lh.s>0.35&&rh.s>0.35) ? (lh.y+rh.y)/2 : topy+shoulderW*1.1;
-        who = matchPlayer(meanHS((midx-shoulderW*0.28)/DW, (topy+(boty-topy)*0.15)/DH,
-                                 (shoulderW*0.56)/DW, ((boty-topy)*0.55)/DH));
+        assignIdentity(tr, matchPlayer(meanHS((midx-shoulderW*0.28)/DW, (topy+(boty-topy)*0.15)/DH,
+                                              (shoulderW*0.56)/DW, ((boty-topy)*0.55)/DH)));
+      } else {
+        assignIdentity(tr, matchPlayer(meanHS(bx0/DW, by0/DH, (bx1-bx0)/DW, (by1-by0)*0.4/DH)));
       }
-      if(!who) who = matchPlayer(meanHS(bnb.x+bnb.w*0.3, bnb.y+bnb.h*0.2, bnb.w*0.4, bnb.h*0.25));
 
-      const body=toScreen(bnb); body.p=who; body.src='pose';
-      bodies.push(ease('b'+(who?who.id:'x'+pi), body));
-
-      const fk=[0,2,5,7,8].map(P).filter(p=>p&&p.s>0.35);     // nose, eyes, ears
+      const fk=[0,2,5,7,8].map(P).filter(p=>p&&p.s>0.35);
+      let head=null;
       let hc=null, hw=0;
       if(fk.length>=2){
         hc={ x:fk.reduce((s,p)=>s+p.x,0)/fk.length, y:fk.reduce((s,p)=>s+p.y,0)/fk.length };
         const le=P(7), re=P(8);
-        const ears = (le&&re&&le.s>0.35&&re.s>0.35) ? Math.hypot(le.x-re.x, le.y-re.y) : 0;
-        hw = Math.max(ears*1.9, shoulderW*0.62, 20);
+        const ears=(le&&re&&le.s>0.35&&re.s>0.35)?Math.hypot(le.x-re.x, le.y-re.y):0;
+        hw=Math.max(ears*1.9, shoulderW*0.62, 20);
       } else if(sOK){
         hc={ x:(ls.x+rs.x)/2, y:(ls.y+rs.y)/2 - shoulderW*0.62 };
-        hw = shoulderW*0.68;
+        hw=shoulderW*0.68;
       }
-      if(hc && hw>6){
-        const hnb={ x:(hc.x-hw/2)/DW, y:(hc.y-hw*0.62)/DH, w:hw/DW, h:(hw*1.18)/DH };
-        const head=toScreen(hnb); head.p=who; head.src=fk.length>=2?'kp':'est';
-        heads.push(ease('h'+(who?who.id:'x'+pi), head));
+      if(hc && hw>6) head={ nb:{x:(hc.x-hw/2)/DW, y:(hc.y-hw*0.62)/DH, w:hw/DW, h:hw*1.18/DH},
+                            src:fk.length>=2?'kp':'est' };
+
+      // mask → Uint8 silhouette, used for both drawing and hit testing
+      let mask=null;
+      const m=masks[pi];
+      if(m){
+        try{
+          const arr = m.getAsUint8Array ? m.getAsUint8Array() : m.getAsFloat32Array();
+          mask={ w:m.width, h:m.height, a:arr, float:!m.getAsUint8Array };
+        }catch(e){}
       }
+      next.push({ p:tr.p, tr, mask, head, L,
+                  nb:{x:bx0/DW, y:by0/DH, w:(bx1-bx0)/DW, h:(by1-by0)/DH} });
     });
 
-    (fr.detections||[]).forEach((f, fi)=>{
+    // faces sharpen the head, or stand alone when no pose was found
+    (fr.detections||[]).forEach(f=>{
       const bb=f.boundingBox; if(!bb) return;
       const cx=bb.originX+bb.width/2, cy=bb.originY+bb.height/2;
       const w=bb.width*1.35, h=bb.height*1.5;
       const nb={ x:(cx-w/2)/DW, y:(cy-h/2-h*0.05)/DH, w:w/DW, h:h/DH };
-      const near=heads.find(hd => cx/DW>hd.nb.x && cx/DW<hd.nb.x+hd.nb.w
-                               && cy/DH>hd.nb.y && cy/DH<hd.nb.y+hd.nb.h);
-      const box=toScreen(nb);
-      if(near){ near.x=box.x; near.y=box.y; near.w=box.w; near.h=box.h; near.nb=nb; near.src='face'; return; }
-      box.p = matchPlayer(meanHS(nb.x, nb.y+nb.h*1.05, nb.w, nb.h*0.55), 38);
-      box.src='face';
-      heads.push(ease('f'+(box.p?box.p.id:'x'+fi), box));
+      const owner=next.find(fg=>fg.head && cx/DW>fg.head.nb.x && cx/DW<fg.head.nb.x+fg.head.nb.w
+                                       && cy/DH>fg.head.nb.y && cy/DH<fg.head.nb.y+fg.head.nb.h);
+      if(owner){ owner.head={nb, src:'face'}; return; }
+      const p=matchPlayer(meanHS(nb.x, nb.y+nb.h*1.05, nb.w, nb.h*0.55), 38);
+      if(p) next.push({ p, mask:null, head:{nb, src:'face'}, nb, faceOnly:true });
     });
 
-    AI.boxes=bodies; AI.heads=heads; AI.t=now(); AI.ms=Math.round(now()-t0);
-  }catch(e){ AI.err = (e && e.message ? e.message : String(e)).slice(0,120); }
+    masks.forEach(m=>{ try{ m.close(); }catch(e){} });
+    tracks = tracks.filter(t=>t.used).map(t=>({...t, used:false}));
+    AI.figs=next; AI.t=now(); AI.ms=Math.round(now()-t0);
+  }catch(e){ AI.err=(e && e.message ? e.message : String(e)).slice(0,120); }
   AI.busy=false;
 }
 
-function paintBodyMarks(){
-  const fresh = now()-AI.t < 900;
-  const keep=new Set();
-  AI.heads.forEach((hd,i)=>{
-    const key='H'+i; keep.add(key);
-    let m=S.marks.get(key);
-    if(!m){ m=document.createElement('div'); m.className='bmark head';
-      m.innerHTML='<span></span>'; $('#fx').append(m); S.marks.set(key,m); }
-    m.classList.toggle('unknown', !hd.p);
-    m.classList.toggle('est', hd.src==='est');
-    m.style.opacity = fresh ? 1 : .35;
-    m.style.left=hd.x+'px'; m.style.top=hd.y+'px'; m.style.width=hd.w+'px'; m.style.height=hd.h+'px';
-    if(hd.p) m.style.borderColor = S.cal[hd.p.band] ? `hsl(${S.cal[hd.p.band].hue} 90% 55%)` : bandOf(hd.p.band).hex;
-    m.firstChild.textContent = hd.p ? hd.p.name+' ×2' : 'KEPALA ?';
-  });
-  AI.boxes.forEach((b,i)=>{
-    const key='B'+i; keep.add(key);
-    let m=S.marks.get(key);
-    if(!m){ m=document.createElement('div'); m.className='bmark';
-      m.innerHTML='<span></span>'; $('#fx').append(m); S.marks.set(key,m); }
-    m.classList.toggle('unknown', !b.p);
-    m.style.opacity = fresh ? 1 : .35;
-    m.style.left=b.x+'px'; m.style.top=b.y+'px'; m.style.width=b.w+'px'; m.style.height=b.h+'px';
-    if(b.p) m.style.borderColor = S.cal[b.p.band] ? `hsl(${S.cal[b.p.band].hue} 90% 55%)` : bandOf(b.p.band).hex;
-    m.firstChild.textContent = b.p ? b.p.name : 'ORANG ?';
-  });
-  S.marks.forEach((m,k)=>{ if((k[0]==='B'||k[0]==='H') && !keep.has(k)){ m.remove(); S.marks.delete(k); } });
+/* ---------------- silhouette rendering ----------------
+   Outline instead of a box: the shape is the person, so nothing "jumps" when
+   a limb enters or leaves the frame. */
+const LIMBS=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+function sizeSilo(){
+  const dpr=Math.min(2, devicePixelRatio||1);
+  if(silo.width!==Math.round(innerWidth*dpr) || silo.height!==Math.round(innerHeight*dpr)){
+    silo.width=Math.round(innerWidth*dpr); silo.height=Math.round(innerHeight*dpr);
+    silo.style.width=innerWidth+'px'; silo.style.height=innerHeight+'px';
+  }
+  octx.setTransform(dpr,0,0,dpr,0,0);
+}
+function figColor(fg){
+  if(!fg.p) return 'rgba(233,239,250,.5)';
+  const c=S.cal[fg.p.band];
+  return c ? `hsl(${c.hue} 92% 60%)` : bandOf(fg.p.band).hex;
+}
+function drawFigures(){
+  sizeSilo();
+  octx.clearRect(0,0,innerWidth,innerHeight);
+  if(S.mode!=='body') return;
+  const stale = now()-AI.t > 900;
+  octx.globalAlpha = stale ? .35 : 1;
+
+  for(const fg of AI.figs){
+    const col=figColor(fg);
+    const [x0,y0]=videoToScreen(fg.nb.x, fg.nb.y);
+    const [x1,y1]=videoToScreen(fg.nb.x+fg.nb.w, fg.nb.y+fg.nb.h);
+
+    if(fg.mask){
+      const {w,h,a,float}=fg.mask;
+      if(mcv.width!==w||mcv.height!==h){ mcv.width=ocv.width=w; mcv.height=ocv.height=h; }
+      const img=mctx.createImageData(w,h);
+      const rgb=hexToRgb(col);
+      for(let i=0,j=0;i<a.length;i++,j+=4){
+        const on = float ? a[i]>0.5 : a[i]>128;
+        if(!on) continue;
+        img.data[j]=rgb[0]; img.data[j+1]=rgb[1]; img.data[j+2]=rgb[2]; img.data[j+3]=255;
+      }
+      mctx.putImageData(img,0,0);
+      // dilate-minus-original leaves a clean contour
+      const k=Math.max(1, Math.round(Math.min(w,h)*0.012));
+      octx2.clearRect(0,0,w,h);
+      octx2.globalCompositeOperation='source-over';
+      octx2.drawImage(mcv,0,0,w,h);
+      octx2.globalCompositeOperation='destination-out';
+      octx2.drawImage(mcv,k,k,w-k*2,h-k*2);
+      octx2.globalCompositeOperation='source-over';
+      const [sx0,sy0]=videoToScreen(0,0), [sx1,sy1]=videoToScreen(1,1);
+      octx.globalAlpha=(stale?.35:1)*0.14; octx.drawImage(mcv, sx0,sy0, sx1-sx0, sy1-sy0);
+      octx.globalAlpha=(stale?.35:1);      octx.drawImage(ocv, sx0,sy0, sx1-sx0, sy1-sy0);
+    } else if(fg.L){
+      octx.strokeStyle=col; octx.lineWidth=3; octx.lineCap='round'; octx.lineJoin='round';
+      octx.beginPath();
+      for(const [i,j] of LIMBS){
+        const A=fg.L[i], B=fg.L[j];
+        if(!A||!B||(A.visibility!=null&&A.visibility<.35)||(B.visibility!=null&&B.visibility<.35)) continue;
+        const [ax,ay]=videoToScreen(A.x,A.y), [bx,by]=videoToScreen(B.x,B.y);
+        octx.moveTo(ax,ay); octx.lineTo(bx,by);
+      }
+      octx.stroke();
+    }
+
+    if(fg.head){
+      const [hx0,hy0]=videoToScreen(fg.head.nb.x, fg.head.nb.y);
+      const [hx1,hy1]=videoToScreen(fg.head.nb.x+fg.head.nb.w, fg.head.nb.y+fg.head.nb.h);
+      octx.strokeStyle=col; octx.lineWidth=2.5;
+      octx.setLineDash(fg.head.src==='est' ? [3,6] : []);
+      octx.beginPath();
+      octx.ellipse((hx0+hx1)/2, (hy0+hy1)/2, Math.abs(hx1-hx0)/2, Math.abs(hy1-hy0)/2, 0,0,7);
+      octx.stroke(); octx.setLineDash([]);
+    }
+
+    const label = fg.p ? fg.p.name + (fg.head?'  ×2':'') : 'ORANG ?';
+    octx.font='600 12px "Martian Mono", monospace';
+    const tw=octx.measureText(label).width;
+    const lx=Math.max(6, Math.min(innerWidth-tw-18, x0)), ly=Math.max(20, y0-10);
+    octx.fillStyle='rgba(11,14,20,.86)';
+    octx.beginPath(); octx.roundRect(lx-6, ly-14, tw+12, 20, 8); octx.fill();
+    octx.fillStyle=fg.p?col:'rgba(233,239,250,.7)';
+    octx.fillText(label, lx, ly);
+  }
+  octx.globalAlpha=1;
+}
+function hexToRgb(c){
+  if(c.startsWith('hsl')){
+    const [h,s,l]=c.match(/[\d.]+/g).map(Number);
+    const a=s/100*Math.min(l/100,1-l/100);
+    const f=n=>{const k=(n+h/30)%12; return Math.round(255*(l/100-a*Math.max(-1,Math.min(k-3,9-k,1))));};
+    return [f(0),f(8),f(4)];
+  }
+  const m=c.replace('#','');
+  return [parseInt(m.slice(0,2),16)||233, parseInt(m.slice(2,4),16)||239, parseInt(m.slice(4,6),16)||250];
+}
+function maskAt(fg, nx, ny){
+  if(!fg.mask) return false;
+  const {w,h,a,float}=fg.mask;
+  const x=Math.round(clamp01(nx)*(w-1)), y=Math.round(clamp01(ny)*(h-1));
+  const val=a[y*w+x];
+  return float ? val>0.5 : val>128;
 }
 
 /* ---------------- solo drone ---------------- */
@@ -1200,19 +1295,24 @@ function acquire(){
     return on ? {id:on.p.id, name:on.p.name} : null;
   }
   if(S.mode==='body'){
-    paintBodyMarks();
-    const pad=10;
-    if(now()-AI.t < 900){
-      const hd = AI.heads.filter(h => h.p &&
-          cx > h.x-pad && cx < h.x+h.w+pad && cy > h.y-pad && cy < h.y+h.h+pad)
-        .sort((a,b)=>(b.w*b.h)-(a.w*a.h))[0];
-      if(hd) return {id:hd.p.id, name:hd.p.name+(hd.src==='est'?' · KEPALA?':' · KEPALA'), head:true};
-    }
     if(now()-AI.t > 900) return null;
-    const on = AI.boxes.filter(b => b.p &&
-        cx > b.x-pad && cx < b.x+b.w+pad && cy > b.y-pad && cy < b.y+b.h+pad)
-      .sort((a,b)=>(a.w*a.h)-(b.w*b.h))[0];
-    return on ? {id:on.p.id, name:on.p.name} : null;
+    const [nx,ny]=screenToVideo(cx,cy);
+    // head first — it is the smaller, higher-value target
+    for(const fg of AI.figs){
+      if(!fg.p || !fg.head) continue;
+      const hb=fg.head.nb, hcx=hb.x+hb.w/2, hcy=hb.y+hb.h/2;
+      const dx=(nx-hcx)/(hb.w/2), dy=(ny-hcy)/(hb.h/2);
+      if(dx*dx+dy*dy <= 1.15)
+        return {id:fg.p.id, name:fg.p.name+(fg.head.src==='est'?' · KEPALA?':' · KEPALA'), head:true};
+    }
+    // body: pixel-exact against the segmentation mask, with the pose box as fallback
+    for(const fg of AI.figs){
+      if(!fg.p || fg.faceOnly) continue;
+      const inMask = fg.mask ? maskAt(fg, nx, ny)
+        : (nx>fg.nb.x && nx<fg.nb.x+fg.nb.w && ny>fg.nb.y && ny<fg.nb.y+fg.nb.h);
+      if(inMask) return {id:fg.p.id, name:fg.p.name};
+    }
+    return null;
   }
   // field
   if(!S.pos) return null;
@@ -1305,6 +1405,7 @@ function loop(t){
     $('#ret').classList.toggle('lock', !!S.lock);
     $('#lockName').textContent = S.lock ? S.lock.name : '';
     if(S.mode==='body' && t-(AI.last||0)>110){ AI.last=t; runDetect(); }
+    if(S.mode==='body') drawFigures();
     if(S.mode==='band' || S.mode==='body') paintCal();
     paintDiag();
     if(S.mode==='field' && !S.pos && !S.gpsWarned && t-S.roundT>8000){
