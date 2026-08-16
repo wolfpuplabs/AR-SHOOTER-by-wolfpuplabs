@@ -243,6 +243,26 @@ input:focus{border-color:var(--peri);outline:none}
 .ammoText small{display:block;font-size:.52rem;font-weight:400;color:var(--dim);letter-spacing:.1em;margin-top:3px}
 .ammoText.empty{color:var(--coral)}
 
+/* drawer + preroll */
+.bot{position:relative;justify-content:center}
+.mini.icon{position:absolute;left:0;bottom:0;width:46px;height:46px;padding:0;
+  display:grid;place-items:center;font-size:1.05rem;line-height:1}
+.pills{position:absolute;left:0;bottom:54px;flex-direction:column;align-items:flex-start;
+  gap:8px;z-index:3;animation:rise .22s cubic-bezier(.2,.9,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.trigger{margin:0 auto}
+.trigger.alt{display:none !important}
+.preroll{position:absolute;left:50%;bottom:calc(var(--tw,110px) + 46px);transform:translateX(-50%);
+  width:min(420px,calc(100% - 24px));text-align:center;border-radius:20px;padding:16px 18px;z-index:4}
+.preroll b{display:block;font-size:1.05rem;margin-bottom:6px}
+.preroll p{font-size:.8rem;color:var(--dim);line-height:1.5}
+.prerow{display:flex;align-items:center;gap:12px;margin-top:14px}
+.prerow .btn{padding:13px 18px;font-size:.9rem}
+#readyCount{font-size:.68rem;color:var(--dim);white-space:nowrap}
+.langtog{position:absolute;top:max(16px,env(safe-area-inset-top,0px));right:var(--gap);z-index:3;
+  font-family:'Martian Mono',monospace;font-size:.66rem;letter-spacing:.1em;padding:9px 13px;
+  border-radius:99px;background:var(--pane-lo);border:1px solid var(--edge)}
+
 /* feedback */
 #flash{position:absolute;inset:0;pointer-events:none;opacity:0;
   background:radial-gradient(120% 90% at 50% 50%,transparent 38%,rgba(255,107,87,.92) 100%)}
@@ -322,15 +342,21 @@ input:focus{border-color:var(--peri);outline:none}
     </div>
     <div id="calbar" hidden></div>
     <div class="glass" id="diag" hidden></div>
-    <div class="bot">
-      <div class="trigger alt">
-        <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44"/>
-          <circle class="fill ammoRing" cx="50" cy="50" r="44"/></svg>
-        <button class="fire" id="btnFire2"><span class="ammoText">12<small>PELURU</small></span></button>
+    <div class="preroll glass" id="preroll" hidden>
+      <b id="prerollTitle">Kalibrasi</b>
+      <p id="prerollHint">Bidik tiap lawan, lalu tap namanya untuk menyampel warna.</p>
+      <div class="prerow">
+        <span id="readyCount" class="mono"></span>
+        <button class="btn" id="btnReady">Siap</button>
       </div>
-      <div class="pills">
-        <button class="mini" id="btnView">Tampilan: minimal</button>
+    </div>
+    <div class="bot">
+      <button class="mini icon" id="btnMenu" aria-expanded="false">☰</button>
+      <div class="pills" id="pills" hidden>
+        <button class="mini" id="btnView">Tampilan</button>
         <button class="mini" id="btnReload">Isi ulang</button>
+        <button class="mini" id="btnDiag">Diagnosis</button>
+        <button class="mini" id="btnLangGame">EN</button>
         <button class="mini" id="btnQuit">Keluar</button>
       </div>
       <div class="trigger">
@@ -349,55 +375,57 @@ input:focus{border-color:var(--peri);outline:none}
 <!-- ===================== BOOT ===================== -->
 <section class="screen on" id="s-boot">
   <div class="aura"></div>
+  <button class="langtog" data-lang-toggle>EN / ID</button>
   <div class="scroll"><div class="wrap">
     <div class="hero">
-      <span class="kicker"><i></i>Laser tag lewat kamera</span>
+      <span class="kicker"><i></i><span data-i18n="kicker">Laser tag lewat kamera</span></span>
       <h1>Tanda<em>Arena</em></h1>
-      <p class="lede">Satu tautan, dibuka di HP masing-masing. Buat arena, sebutkan kodenya, lalu saling bidik lewat kamera. Tidak ada server game di tengah — HP-nya ngobrol langsung.</p>
+      <p class="lede" data-i18n="lede">…</p>
     </div>
 
     <div class="setup">
       <div class="pane">
-        <h3>Cara menandai lawan</h3>
+        <h3 data-i18n="howMark">Cara menandai lawan</h3>
         <div class="opts" id="modePick">
-          <button class="opt" data-mode="band" aria-pressed="true"><b>Pita</b><span>Dalam ruangan. Warna terang.</span></button>
-          <button class="opt" data-mode="body" aria-pressed="false"><b>Badan</b><span>Lacak orang. Unduh model.</span></button>
-          <button class="opt" data-mode="field" aria-pressed="false"><b>Lapangan</b><span>Luar saja. GPS.</span></button>
-          <button class="opt" data-mode="solo" aria-pressed="false"><b>Latihan</b><span>Sendirian. Drone.</span></button>
+          <button class="opt" data-mode="band" aria-pressed="true"><b data-i18n="mTape">Pita</b><span data-i18n="mTapeD">Dalam ruangan.</span></button>
+          <button class="opt" data-mode="body" aria-pressed="false"><b data-i18n="mBody">Badan</b><span data-i18n="mBodyD">Lacak orang.</span></button>
+          <button class="opt" data-mode="field" aria-pressed="false"><b data-i18n="mField">Lapangan</b><span data-i18n="mFieldD">Luar saja.</span></button>
+          <button class="opt" data-mode="solo" aria-pressed="false"><b data-i18n="mSolo">Latihan</b><span data-i18n="mSoloD">Sendirian.</span></button>
         </div>
         <p class="note" id="modeNote"></p>
       </div>
 
       <div class="pane">
-        <h3>Identitasmu</h3>
-        <label class="f" for="inName">Nama panggilan</label>
-        <input id="inName" maxlength="10" placeholder="KAMU">
-        <label class="f" style="margin-top:16px">Tanda warna</label>
+        <h3 data-i18n="identity">Identitasmu</h3>
+        <label class="f" for="inName" data-i18n="nickname">Nama panggilan</label>
+        <input id="inName" maxlength="10" placeholder="YOU" data-i18n-ph="phName">
+        <label class="f" style="margin-top:16px" data-i18n="colorMark">Tanda warna</label>
         <div class="bands" id="bandPick"></div>
-        <p class="note">Cuma label identitas — kamu tidak harus punya persis warna ini. Pakai benda apa pun yang terang dan berbeda dari pemain lain, nanti warnanya disampel di dalam ronde.</p>
+        <p class="note" data-i18n="colorNote">…</p>
       </div>
     </div>
 
     <div class="stack" id="joinPane">
-      <button class="btn" id="btnHost">Buka arena baru <span class="k">HOST</span></button>
-      <div class="orsep">atau gabung</div>
+      <button class="btn" id="btnHost"><span data-i18n="host">Buka arena baru</span> <span class="k">HOST</span></button>
+      <div class="orsep" data-i18n="orJoin">atau gabung</div>
       <div class="joinrow">
-        <input id="inCode" maxlength="4" placeholder="KODE" autocomplete="off" inputmode="latin">
-        <button class="btn ghost" id="btnJoin">Masuk</button>
+        <input id="inCode" maxlength="4" placeholder="CODE" data-i18n-ph="phCode" autocomplete="off" inputmode="latin">
+        <button class="btn ghost" id="btnJoin" data-i18n="enter">Masuk</button>
       </div>
     </div>
-    <button class="btn" id="btnSolo" hidden>Mulai latihan <span class="k">SOLO</span></button>
+    <button class="btn" id="btnSolo" hidden><span data-i18n="startSolo">Mulai latihan</span> <span class="k">SOLO</span></button>
 
-    <p class="note">Perlu HTTPS dan izin kamera. Di iPhone, Safari akan menanyakan izin gerak saat ronde dimulai.</p>
+    <p class="note" data-i18n="httpsNote">…</p>
   </div></div>
 </section>
 
 <!-- ===================== LOBBY ===================== -->
 <section class="screen" id="s-lobby">
   <div class="aura"></div>
+  <button class="langtog" data-lang-toggle>EN / ID</button>
   <div class="scroll"><div class="wrap">
     <div class="hero">
-      <span class="kicker"><i></i>Ruang tunggu</span>
+      <span class="kicker"><i></i><span data-i18n="waiting">Ruang tunggu</span></span>
       <div class="code" id="lobbyCode">····</div>
       <p class="lede" id="lobbyHint" style="margin-top:14px">Sebutkan kode ini ke teman-temanmu.</p>
     </div>
@@ -407,22 +435,22 @@ input:focus{border-color:var(--peri);outline:none}
         <div id="roster"></div>
       </div>
       <div class="pane">
-        <h3>Mode ronde</h3>
+        <h3 data-i18n="roundMode">Mode ronde</h3>
         <div class="row"><span class="nm" id="lobbyMode">—</span></div>
         <p class="note" id="lobbyModeNote"></p>
       </div>
       <div class="pane">
-        <h3>Aturan ronde</h3>
-        <div class="row"><span class="nm">Nyawa</span><span class="st">100 · tembakan 25</span></div>
-        <div class="row"><span class="nm">Kena kepala</span><span class="st">50 · dobel</span></div>
-        <div class="row"><span class="nm">Peluru</span><span class="st">12 · isi ulang 1,6 dtk</span></div>
-        <div class="row"><span class="nm">Respawn</span><span class="st">5 detik</span></div>
-        <div class="row"><span class="nm">Ronde selesai</span><span class="st">10 tag</span></div>
+        <h3 data-i18n="rules">Aturan ronde</h3>
+        <div class="row"><span class="nm" data-i18n="rHp">Nyawa</span><span class="st" data-i18n="vHp">100 · tembakan 25</span></div>
+        <div class="row"><span class="nm" data-i18n="rHead">Kena kepala</span><span class="st" data-i18n="vHead">50 · dobel</span></div>
+        <div class="row"><span class="nm" data-i18n="rAmmo">Peluru</span><span class="st" data-i18n="vAmmo">12 · isi ulang 1,6 dtk</span></div>
+        <div class="row"><span class="nm" data-i18n="rRespawn">Respawn</span><span class="st" data-i18n="vRespawn">5 detik</span></div>
+        <div class="row"><span class="nm" data-i18n="rEnd">Ronde selesai</span><span class="st" data-i18n="vEnd">10 tag</span></div>
       </div>
     </div>
     <div class="stack">
-      <button class="btn" id="btnStart">Mulai ronde</button>
-      <button class="btn ghost" id="btnLeave">Batal</button>
+      <button class="btn" id="btnStart" data-i18n="startRound">Mulai ronde</button>
+      <button class="btn ghost" id="btnLeave" data-i18n="cancel">Batal</button>
     </div>
     <p class="note" id="netNote"></p>
   </div></div>
@@ -431,16 +459,17 @@ input:focus{border-color:var(--peri);outline:none}
 <!-- ===================== END ===================== -->
 <section class="screen" id="s-end">
   <div class="aura"></div>
+  <button class="langtog" data-lang-toggle>EN / ID</button>
   <div class="scroll"><div class="wrap">
     <div class="hero">
-      <span class="kicker"><i></i>Ronde selesai</span>
+      <span class="kicker"><i></i><span data-i18n="roundOver">Ronde selesai</span></span>
       <h1 id="endTitle">Hasil</h1>
     </div>
     <div class="pane"><div id="endBoard"></div></div>
     <div class="stack">
-      <button class="btn" id="btnAgain">Main lagi</button>
-      <button class="btn ghost" id="btnLobby">Kembali ke ruang tunggu</button>
-      <button class="btn ghost" id="btnHome">Keluar arena</button>
+      <button class="btn" id="btnAgain" data-i18n="again">Main lagi</button>
+      <button class="btn ghost" id="btnLobby" data-i18n="backLobby">Kembali</button>
+      <button class="btn ghost" id="btnHome" data-i18n="leaveArena">Keluar arena</button>
     </div>
   </div></div>
 </section>
@@ -461,8 +490,8 @@ const BANDS = [
   { k:'c3', nm:'LIME',    hex:'#A6FF00', hue: 78, sat:.50 },
   { k:'c4', nm:'ORANYE',  hex:'#FF7A00', hue: 28, sat:.55 }
 ];
-const CFG = { hp:100, dmg:25, headDmg:50, mag:12, reloadMs:1600, fireMs:260, respawnMs:5000,
-              winKills:10, lockPx:96, minBlob:26, fovDeg:14, rangeM:45, minRangeM:8, holdMs:320, shieldMs:2500 };
+const CFG = { hp:100, dmg:25, headDmg:50, mag:12, reloadMs:1600, fireMs:150, respawnMs:5000,
+              winKills:10, lockPx:96, minBlob:26, fovDeg:14, rangeM:45, minRangeM:8, holdMs:320, shieldMs:2500, countIn:3 };
 
 const S = {
   mode:'band', isHost:false, code:'', started:false,
@@ -471,7 +500,7 @@ const S = {
   ammo:CFG.mag, reloading:false, lastShot:0,
   lock:null, marks:new Map(),
   heading:0, pos:null, drone:null, raf:0, scanT:0, posT:0,
-  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0, overlay:'off', shieldUntil:0
+  cal:{}, blob:{}, diag:false, gpsWarned:false, roundT:0, overlay:'off', shieldUntil:0, phase:'live', trig:false, ready:false, fx:[]
 };
 
 /* ---------------- helpers ---------------- */
@@ -551,18 +580,147 @@ addEventListener('unhandledrejection', e=>{
   try{ toast('Galat async: '+((e.reason&&e.reason.message)||e.reason), 8000); }catch(_){}
 });
 
+
+/* ---------------- i18n (English default) ---------------- */
+const I18N={
+ en:{
+  kicker:'Laser tag through your camera',
+  lede:'One link, opened on every phone. Open an arena, read out the code, then tag each other through the camera. No game server in the middle — the phones talk directly.',
+  howMark:'How to mark an opponent', identity:'Your identity',
+  mTape:'Tape', mTapeD:'Indoors. Bright colour.',
+  mBody:'Body', mBodyD:'Tracks people. Downloads a model.',
+  mField:'Field', mFieldD:'Outdoors only. GPS.',
+  mSolo:'Practice', mSoloD:'Alone. Drone target.',
+  nickname:'Nickname', colorMark:'Colour mark',
+  colorNote:'Just an identity label — you do not need this exact colour. Wear anything bright that differs from the other players; its real colour gets sampled before the round.',
+  host:'Open a new arena', orJoin:'or join', enter:'Enter', startSolo:'Start practice',
+  httpsNote:'Needs HTTPS and camera permission. On iPhone, Safari asks for motion access when the round starts.',
+  phName:'YOU', phCode:'CODE',
+  waiting:'Waiting room', roundMode:'Round mode', rules:'Round rules',
+  rHp:'Health', rHead:'Headshot', rAmmo:'Ammo', rRespawn:'Respawn', rEnd:'Round ends at',
+  vHp:'100 · hit 25', vHead:'50 · double', vAmmo:'12 · reload 1.6s', vRespawn:'5s + 2.5s immune', vEnd:'10 tags',
+  startRound:'Start round', cancel:'Cancel', roundOver:'Round over',
+  again:'Play again', backLobby:'Back to waiting room', leaveArena:'Leave arena',
+  players:'Players', you:'you', byHost:'set by host',
+  hintHost:'Read this code out to your friends. You start the round.',
+  hintGuest:'Waiting for the host to start the round.',
+  note_band:'For indoor play. Everyone wears a different bright object; aim until the bracket turns red, then shoot.',
+  note_body:'MediaPipe tracks the skeleton (body and head from any angle) and a face detector sharpens the head. A head peeking out can still be hit, and headshots do double damage.',
+  note_field:'Outdoors only. GPS gets no fix indoors, and players must be at least 10 m apart or the bearing between them is noise.',
+  note_solo:'No friends, no network. A drone target floats on screen so you can feel out the shooting.',
+  mode_band:'COLOUR TAPE', mode_body:'BODY + HEAD', mode_field:'FIELD (GPS)', mode_solo:'PRACTICE',
+  view_off:'Overlay: clean', view_min:'Overlay: minimal', view_full:'Overlay: full',
+  reload:'Reload', diag:'Diagnostics', quit:'Quit', lang:'EN',
+  calTitle:'Calibrate first', calHint:'Aim at each opponent and tap their name to sample the colour they are wearing.',
+  calHintSolo:'Get ready.', ready:'Ready', startNow:'Start now', readyN:'{0}/{1} ready',
+  waitReady:'Waiting for the others…', go:'GO',
+  bTagged:'DOWN', bHead:'HEADSHOT', bTag:'TAG', bActive:'BACK IN', bShield:'immune {0}s',
+  bStartBand:'aim at their tape', bStartBody:'aim at the person', bStartField:'face your opponent',
+  bStartSolo:'take down the drone', bModel:'LOADING MODEL', bModelSub:'one-time download',
+  bGps:'NO GPS', bGpsSub:'field mode needs open sky', bDroneDown:'DRONE DOWN',
+  respawnIn:'respawn {0}', tags:'{0} tags · {1} downs', win:'You win', result:'Result',
+  tCode4:'Arena code is 4 letters.', tMin2:'At least 2 players.',
+  tCam:'Camera denied. Needs HTTPS and camera permission.',
+  tModel:'Model failed to load, falling back to Tape mode. ',
+  tAimBody:'Aim at the person first.', tDim:'Too dark to sample.',
+  tDull:'That colour is too washed out — use something brighter.',
+  tLocked:'{0} locked at hue {1}°.', tCleared:'Sample for {0} cleared.',
+  tRematchAsk:'Asking the host for another round…', tRematch:'{0} wants a rematch.',
+  tNoGps:'No GPS fix. Indoors use Tape mode — outdoors, spread out at least 10 m.',
+  tGpsDenied:'GPS denied or unavailable. This mode cannot work indoors — use Tape mode.',
+  geoDenied:'location permission denied', geoNone:'no GPS signal',
+  tEmpty:'Out of ammo.', netFind:'Looking for the arena…', netOk:'Connected.',
+  netReady:'Arena is live. The code works while this tab stays open.',
+  netHostFail:'Network: {0} — try again or check your connection.',
+  netJoinFail:'Failed: {0} — check the code and that the host is still online.',
+  netLost:'Lost the connection to the host.', feedTag:'{0} tagged {1}', feedHead:'{0} headshot {1}'
+ },
+ id:{
+  kicker:'Laser tag lewat kamera',
+  lede:'Satu tautan, dibuka di HP masing-masing. Buka arena, sebutkan kodenya, lalu saling bidik lewat kamera. Tidak ada server game di tengah — HP-nya ngobrol langsung.',
+  howMark:'Cara menandai lawan', identity:'Identitasmu',
+  mTape:'Pita', mTapeD:'Dalam ruangan. Warna terang.',
+  mBody:'Badan', mBodyD:'Lacak orang. Unduh model.',
+  mField:'Lapangan', mFieldD:'Luar saja. GPS.',
+  mSolo:'Latihan', mSoloD:'Sendirian. Target drone.',
+  nickname:'Nama panggilan', colorMark:'Tanda warna',
+  colorNote:'Cuma label identitas — kamu tidak harus punya persis warna ini. Pakai benda apa pun yang terang dan berbeda dari pemain lain; warna aslinya disampel sebelum ronde.',
+  host:'Buka arena baru', orJoin:'atau gabung', enter:'Masuk', startSolo:'Mulai latihan',
+  httpsNote:'Perlu HTTPS dan izin kamera. Di iPhone, Safari menanyakan izin gerak saat ronde dimulai.',
+  phName:'KAMU', phCode:'KODE',
+  waiting:'Ruang tunggu', roundMode:'Mode ronde', rules:'Aturan ronde',
+  rHp:'Nyawa', rHead:'Kena kepala', rAmmo:'Peluru', rRespawn:'Respawn', rEnd:'Ronde selesai',
+  vHp:'100 · tembakan 25', vHead:'50 · dobel', vAmmo:'12 · isi ulang 1,6 dtk',
+  vRespawn:'5 dtk + kebal 2,5 dtk', vEnd:'10 tag',
+  startRound:'Mulai ronde', cancel:'Batal', roundOver:'Ronde selesai',
+  again:'Main lagi', backLobby:'Kembali ke ruang tunggu', leaveArena:'Keluar arena',
+  players:'Pemain', you:'kamu', byHost:'ditentukan host',
+  hintHost:'Sebutkan kode ini ke teman-temanmu. Kamu yang memulai ronde.',
+  hintGuest:'Menunggu host memulai ronde.',
+  note_band:'Untuk main di dalam ruangan. Tiap orang pakai benda terang berbeda; bidik sampai bracket merah, lalu tembak.',
+  note_body:'MediaPipe melacak kerangka (badan dan kepala dari segala arah) dan detektor wajah mempertajam kepala. Kepala yang nongol tetap bisa ditembak, dan kena kepala damage-nya dobel.',
+  note_field:'Cuma di luar ruangan. GPS tidak dapat sinyal di dalam rumah, dan pemain harus berjarak minimal 10 m.',
+  note_solo:'Tanpa teman, tanpa jaringan. Target drone melayang di layar buat mencoba rasa tembakannya.',
+  mode_band:'PITA WARNA', mode_body:'BADAN + KEPALA', mode_field:'LAPANGAN (GPS)', mode_solo:'LATIHAN',
+  view_off:'Tampilan: bersih', view_min:'Tampilan: minimal', view_full:'Tampilan: penuh',
+  reload:'Isi ulang', diag:'Diagnosis', quit:'Keluar', lang:'ID',
+  calTitle:'Kalibrasi dulu', calHint:'Bidik tiap lawan, lalu tap namanya untuk menyampel warna yang dia pakai.',
+  calHintSolo:'Bersiap.', ready:'Siap', startNow:'Mulai sekarang', readyN:'{0}/{1} siap',
+  waitReady:'Menunggu yang lain…', go:'MULAI',
+  bTagged:'TUMBANG', bHead:'HEADSHOT', bTag:'TAG', bActive:'AKTIF', bShield:'kebal {0} dtk',
+  bStartBand:'bidik pitanya', bStartBody:'bidik orangnya', bStartField:'hadapkan HP ke lawan',
+  bStartSolo:'jatuhkan dronenya', bModel:'MEMUAT MODEL', bModelSub:'sekali unduh',
+  bGps:'GPS MATI', bGpsSub:'mode lapangan butuh sinyal langit', bDroneDown:'DRONE JATUH',
+  respawnIn:'respawn {0}', tags:'{0} tag · {1} kena', win:'Kamu menang', result:'Hasil',
+  tCode4:'Kode arena 4 huruf.', tMin2:'Minimal 2 pemain.',
+  tCam:'Kamera ditolak. Butuh HTTPS dan izin kamera.',
+  tModel:'Model gagal dimuat, balik ke mode Pita. ',
+  tAimBody:'Arahkan crosshair ke orangnya dulu.', tDim:'Terlalu gelap buat disampel.',
+  tDull:'Warnanya terlalu pudar — pakai yang lebih ngejreng.',
+  tLocked:'Warna {0} dikunci di hue {1}°.', tCleared:'Sampel {0} dihapus.',
+  tRematchAsk:'Minta host mulai ronde baru…', tRematch:'{0} minta main lagi.',
+  tNoGps:'Tidak ada fix GPS. Di dalam ruangan pakai mode Pita — di luar, berpencar minimal 10 m.',
+  tGpsDenied:'GPS ditolak atau tidak tersedia. Mode ini tidak bisa di dalam ruangan — pakai mode Pita.',
+  geoDenied:'izin lokasi ditolak', geoNone:'tidak ada sinyal GPS',
+  tEmpty:'Peluru habis.', netFind:'Mencari arena…', netOk:'Tersambung.',
+  netReady:'Arena siap. Kode aktif selama tab ini terbuka.',
+  netHostFail:'Jaringan: {0} — coba lagi atau cek koneksi.',
+  netJoinFail:'Gagal: {0} — pastikan kode benar dan host masih online.',
+  netLost:'Sambungan ke host putus.', feedTag:'{0} menandai {1}', feedHead:'{0} headshot {1}'
+ }
+};
+let LANG='en';
+function T(k,...a){ let v=(I18N[LANG]&&I18N[LANG][k]) || I18N.en[k] || k;
+  a.forEach((x,i)=>{ v=v.split('{'+i+'}').join(x); }); return v; }
+function applyLang(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=T(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.placeholder=T(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-lang-toggle]').forEach(b=>{ b.textContent = LANG==='en'?'EN / ID':'ID / EN'; });
+  const g=$('#btnLangGame'); if(g) g.textContent = LANG==='en'?'EN':'ID';
+  const n=$('#modeNote'); if(n) n.textContent=T('note_'+S.mode);
+  const v=$('#btnView'); if(v) v.textContent=T('view_'+S.overlay);
+  const r=$('#btnReload'); if(r) r.textContent=T('reload');
+  const dg=$('#btnDiag'); if(dg) dg.textContent=T('diag');
+  const q=$('#btnQuit'); if(q) q.textContent=T('quit');
+  document.querySelectorAll('[data-val]').forEach(el=>{ el.textContent=T(el.dataset.val); });
+  paintRoster(); paintLobbyMode(); paintPreroll();
+}
+document.querySelectorAll('[data-lang-toggle]').forEach(b=>{
+  b.onclick=()=>{ LANG = LANG==='en' ? 'id' : 'en'; applyLang(); };
+});
+
 /* ---------------- boot UI ---------------- */
-const MODE_NOTE = {
+const MODE_NOTE_UNUSED = {
   band:'Untuk main di dalam ruangan. Tiap orang pakai benda warna beda; bidik sampai bracket merah, lalu tembak. Bisa sampel warna aslinya di tengah ronde.',
   field:'Cuma jalan di LUAR RUANGAN. GPS nggak dapat sinyal di dalam rumah, dan pemain harus berpencar minimal 10 m — kalau berdekatan, arah antar-pemain cuma jadi angka acak.',
   body:'MediaPipe melacak kerangka (badan + kepala dari segala arah) dan detektor wajah mempertajam kotak kepala saat wajah menghadapmu. Kepala nongol doang tetap bisa ditembak, dan kena kepala = damage dobel.  Detail: yang dilacak badan lawan, bukan warna. Warna baju cuma dipakai buat membedakan siapa. Sekali unduh model ~6 MB, butuh internet di awal ronde.',
   solo:'Tanpa teman, tanpa jaringan. Drone target melayang di layar buat kalibrasi rasa tembakannya.'
 };
-$('#modeNote').textContent = MODE_NOTE.band;
+$('#modeNote').textContent = T('note_band');
 $('#modePick').addEventListener('click', e=>{
   const b=e.target.closest('.opt'); if(!b) return;
   $$('#modePick .opt').forEach(o=>o.setAttribute('aria-pressed', String(o===b)));
-  S.mode=b.dataset.mode; $('#modeNote').textContent=MODE_NOTE[S.mode];
+  S.mode=b.dataset.mode; $('#modeNote').textContent=T('note_'+S.mode);
   const solo = S.mode==='solo';
   $('#joinPane').hidden=solo; $('#btnSolo').hidden=!solo;
 });
@@ -577,11 +735,11 @@ BANDS.forEach((b,i)=>{
 $('#inName').addEventListener('input', e=>{ S.me.name=(e.target.value||'KAMU').toUpperCase().slice(0,10); });
 $('#btnHost').onclick = ()=> net.host();
 $('#btnJoin').onclick = ()=>{ const c=$('#inCode').value.trim().toUpperCase();
-  if(c.length!==4) return toast('Kode arena 4 huruf.'); net.join(c); };
+  if(c.length!==4) return toast(T('tCode4')); net.join(c); };
 $('#btnSolo').onclick = ()=>{ S.isHost=true; startRound(); };
 $('#btnLeave').onclick = ()=>{ net.close(); show('s-boot'); };
 $('#btnStart').onclick = async ()=>{
-  if(S.players.size<2 && S.mode!=='solo') return toast('Minimal 2 pemain.');
+  if(S.players.size<2 && S.mode!=='solo') return toast(T('tMin2'));
   if(S.mode==='field'){
     const ok = await gpsCheck();
     if(!ok) return;
@@ -604,28 +762,26 @@ $('#btnHome').onclick = ()=>{ net.close(); show('s-boot'); };
 $('#btnAgain').onclick = ()=>{
   [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
   if(S.mode==='solo' || S.isHost){ if(S.mode!=='solo') net.send({t:'start', mode:S.mode}); startRound(); }
-  else { net.send({t:'rematch', by:S.me.name}); toast('Minta host mulai ronde baru…'); show('s-lobby'); }
+  else { net.send({t:'rematch', by:S.me.name}); toast(T('tRematchAsk')); show('s-lobby'); }
 };
 $('#btnLobby').onclick = ()=> show(S.mode==='solo' ? 's-boot' : 's-lobby');
 
 /* ---------------- roster ---------------- */
 function paintLobbyMode(){
-  const nm={band:'PITA WARNA',body:'BADAN + KEPALA',field:'LAPANGAN (GPS)',solo:'LATIHAN'}[S.mode]||S.mode;
   const a=$('#lobbyMode'), b=$('#lobbyModeNote');
-  if(a) a.textContent = nm + (S.isHost?'' : ' · ditentukan host');
-  if(b) b.textContent = MODE_NOTE[S.mode]||'';
+  if(a) a.textContent = T('mode_'+S.mode) + (S.isHost?'' : ' · '+T('byHost'));
+  if(b) b.textContent = T('note_'+S.mode);
 }
 function paintRoster(){
   const list = S.players.size ? [...S.players.values()] : [S.me];
   $('#pcount').textContent = `${list.length}/4`;
   $('#roster').innerHTML = list.map(p=>`<div class="row">
       <span class="chip" style="background:${bandOf(p.band).hex};color:${bandOf(p.band).hex}"></span>
-      <span class="nm">${p.name}${p.id===S.me.id?' · kamu':''}</span>
+      <span class="nm">${p.name}${p.id===S.me.id?' · '+T('you'):''}</span>
       <span class="st">${bandOf(p.band).nm}</span></div>`).join('');
   $('#btnStart').hidden = !S.isHost;
   $('#lobbyHint').textContent = S.isHost
-    ? 'Sebutkan kode ini ke teman-temanmu. Kamu yang mulai ronde.'
-    : 'Menunggu host memulai ronde.';
+    ? T('hintHost') : T('hintGuest');
 }
 
 /* ---------------- networking (PeerJS star topology) ---------------- */
@@ -637,15 +793,16 @@ const net = {
     S.me.id='H'+S.code;
     S.players.clear(); S.players.set(S.me.id, S.me);
     $('#lobbyCode').textContent=S.code; paintRoster(); paintLobbyMode(); show('s-lobby');
-    $('#netNote').textContent='Menghubungkan ke broker…';
+    $('#netNote').textContent=T('netFind');
     this.peer = new Peer('tanda-'+S.code+'-h');
-    this.peer.on('open', ()=> $('#netNote').textContent='Arena siap. Kode aktif selama tab ini terbuka.');
-    this.peer.on('error', e=> $('#netNote').textContent='Jaringan: '+e.type+' — coba kode lain / cek internet.');
+    this.peer.on('open', ()=> $('#netNote').textContent=T('netReady'));
+    this.peer.on('error', e=> $('#netNote').textContent=T('netHostFail', e.type));
     this.peer.on('connection', c=>{
       this.conns.push(c);
       c.on('data', d=>{ if(d.t==='hello') c.meta=d.p.id; this.relay(d,c); handle(d); });
       c.on('close', ()=>{ this.conns=this.conns.filter(x=>x!==c);
-        if(c.meta){ S.players.delete(c.meta); paintRoster();
+        if(c.meta){ S.players.delete(c.meta); applyLang();
+paintRoster();
           this.send({t:'roster', list:[...S.players.values()].map(pub)}); } });
     });
    }catch(e){ show('s-boot'); toast('Gagal membuka arena: '+(e.message||e), 8000); }
@@ -654,16 +811,16 @@ const net = {
    try{
     S.isHost=false; S.code=code; S.me.id='P'+Math.random().toString(36).slice(2,7).toUpperCase();
     $('#lobbyCode').textContent=code; paintLobbyMode(); show('s-lobby');
-    $('#netNote').textContent='Mencari arena…';
+    $('#netNote').textContent=T('netFind');
     this.peer = new Peer();
     this.peer.on('open', ()=>{
       this.up = this.peer.connect('tanda-'+code+'-h', {reliable:true});
-      this.up.on('open', ()=>{ $('#netNote').textContent='Tersambung.';
+      this.up.on('open', ()=>{ $('#netNote').textContent=T('netOk');
         this.up.send({t:'hello', p:pub(S.me)}); });
       this.up.on('data', handle);
-      this.up.on('close', ()=>{ toast('Sambungan ke host putus.'); });
+      this.up.on('close', ()=>{ toast(T('netLost')); });
     });
-    this.peer.on('error', e=> $('#netNote').textContent='Gagal: '+e.type+' — pastikan kode benar & host masih online.');
+    this.peer.on('error', e=> $('#netNote').textContent=T('netJoinFail', e.type));
    }catch(e){ show('s-boot'); toast('Gagal masuk arena: '+(e.message||e), 8000); }
   },
   relay(d, from){ this.conns.forEach(c=>{ if(c!==from && c.open) c.send(d); }); },
@@ -691,18 +848,20 @@ function handle(d){
     case 'tagged': {
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
-      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?'HEADSHOT':'TAG','+1'); }
-      feed(`<b>${by?by.name:'?'}</b> ${d.head?'headshot':'menandai'} <b>${to?to.name:'?'}</b>`);
+      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?T('bHead'):T('bTag'),'+1'); }
+      feed(T(d.head?'feedHead':'feedTag', `<b>${by?by.name:'?'}</b>`, `<b>${to?to.name:'?'}</b>`));
       paintScore();
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
       break; }
     case 'hp': { const p=S.players.get(d.id); if(p){ p.hp=d.hp; p.alive=d.alive; p.prot=!!d.prot; } break; }
     case 'rematch':
-      if(S.isHost){ toast(`${d.by} minta main lagi.`);
+      if(S.isHost){ toast(T('tRematch', d.by));
         [...S.players.values()].forEach(p=>{p.kills=0;p.deaths=0;p.hp=CFG.hp;p.alive=true;});
         net.send({t:'start', mode:S.mode}); startRound(); }
       break;
     case 'cal': if(!S.cal[d.band]) S.cal[d.band]={hue:d.hue, sat:d.sat}; break;
+    case 'ready': { const p=S.players.get(d.id); if(p) p.rdy=true; paintPreroll(); checkAllReady(); break; }
+    case 'go': beginCountdown(); break;
     case 'end': endRound(); break;
   }
 }
@@ -776,8 +935,8 @@ async function startSensors(){
   stopSensors();
   geoWatch = navigator.geolocation.watchPosition(
     p=>{ S.pos={lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy}; },
-    e=>{ S.geoErr = e.code===1?'izin lokasi ditolak':'sinyal GPS tidak ada';
-         toast('Mode lapangan butuh GPS: '+S.geoErr+'. Ganti ke mode Pita untuk main di dalam ruangan.', 5000); },
+    e=>{ S.geoErr = e.code===1 ? T('geoDenied') : T('geoNone');
+         toast(T('tGpsDenied')+' ('+S.geoErr+')', 6000); },
     {enableHighAccuracy:true, maximumAge:1000, timeout:8000});
 }
 const R=6371000, rad=d=>d*Math.PI/180;
@@ -912,12 +1071,12 @@ function sampleColor(bandKey, label){
     const [nx,ny]=screenToVideo(cx,cy);
     const b=AI.figs.find(f=>!f.faceOnly && (f.mask ? maskAt(f,nx,ny)
       : (nx>f.nb.x&&nx<f.nb.x+f.nb.w&&ny>f.nb.y&&ny<f.nb.y+f.nb.h)));
-    if(!b) return toast('Arahkan crosshair ke badan orangnya dulu.');
+    if(!b) return toast(T('tAimBody'));
     const c=meanHS(b.nb.x+b.nb.w*0.30, b.nb.y+b.nb.h*0.20, b.nb.w*0.40, b.nb.h*0.28);
-    if(!c || c.sat<.16) return toast('Baju itu terlalu kusam buat dibedakan.');
+    if(!c || c.sat<.16) return toast(T('tDull'));
     S.cal[bandKey]={hue:Math.round(c.hue), sat:c.sat};
     net.send({t:'cal', band:bandKey, hue:Math.round(c.hue), sat:c.sat});
-    SFX.reload(); buzz(20); toast(`Baju ${label} dikunci di hue ${Math.round(c.hue)}°.`); paintCal();
+    SFX.reload(); buzz(20); toast(T('tLocked', label, Math.round(c.hue))); paintCal();
     return;
   }
   const w=v.videoWidth, h=v.videoHeight, box=Math.min(w,h)*0.13;
@@ -929,18 +1088,19 @@ function sampleColor(bandKey, label){
     if(va<.15) continue;
     const r=rad(hu); sx+=Math.cos(r); sy+=Math.sin(r); ss+=sa; sv+=va; n++;
   }
-  if(!n) return toast('Terlalu gelap buat disampel.');
+  if(!n) return toast(T('tDim'));
   const hue=(Math.atan2(sy/n, sx/n)*180/Math.PI+360)%360, sat=ss/n;
-  if(sat<.22) return toast('Warnanya terlalu pudar — pakai benda yang lebih ngejreng.');
+  if(sat<.22) return toast(T('tDull'));
   S.cal[bandKey]={hue:Math.round(hue), sat};
   if(S.mode!=='solo') net.send({t:'cal', band:bandKey, hue:Math.round(hue), sat});
   SFX.reload(); buzz(20);
-  toast(`Warna ${label} dikunci di hue ${Math.round(hue)}°.`);
+  toast(T('tLocked', label, Math.round(hue)));
   paintCal();
 }
 function paintCal(){
   const bar=$('#calbar');
   if(S.mode!=='band' && S.mode!=='body'){ bar.hidden=true; return; }
+  if(S.phase!=='cal' && S.overlay==='off'){ bar.hidden=true; return; }
   const foes=[...S.players.values()].filter(p=>p.id!==S.me.id);
   bar.hidden = !foes.length;
   bar.innerHTML = foes.map(p=>{
@@ -957,7 +1117,7 @@ let calHold;
 $('#calbar').addEventListener('pointerdown', e=>{
   const b=e.target.closest('.cal'); if(!b) return;
   calHold=setTimeout(()=>{ calHold=null; delete S.cal[b.dataset.band];
-    toast(`Sampel ${b.dataset.nm} dihapus.`); paintCal(); }, 700);
+    toast(T('tCleared', b.dataset.nm)); paintCal(); }, 700);
 });
 $('#calbar').addEventListener('pointerup', e=>{
   const b=e.target.closest('.cal'); if(!b || !calHold) return;
@@ -1182,23 +1342,67 @@ function sizeSilo(){
   }
   octx.setTransform(dpr,0,0,dpr,0,0);
 }
+function colorOf(p){
+  if(!p) return '#FF6B57';
+  const c=S.cal[p.band];
+  return c ? `hsl(${c.hue} 92% 60%)` : bandOf(p.band).hex;
+}
 function figColor(fg){
   if(fg.p && !targetable(fg.p)) return 'rgba(160,172,190,.75)';
   if(!fg.p) return 'rgba(233,239,250,.5)';
-  const c=S.cal[fg.p.band];
-  return c ? `hsl(${c.hue} 92% 60%)` : bandOf(fg.p.band).hex;
+  return colorOf(fg.p);
 }
-const VIEW={ full:'Tampilan: penuh', min:'Tampilan: minimal', off:'Tampilan: bersih' };
+
 function cycleView(){
   const order=['off','min','full'];
   S.overlay = order[(order.indexOf(S.overlay)+1) % order.length];
-  const b=$('#btnView'); if(b) b.textContent=VIEW[S.overlay];
+  const b=$('#btnView'); if(b) b.textContent=T('view_'+S.overlay);
   drawFigures();
 }
-function drawFigures(){
+/* Every shot leaves a tracer from the muzzle line to where it landed, tinted
+   with the shooter's own mark colour, so a burst reads as your fire and not
+   someone else's. */
+function addTracer(x,y,col,hit){
+  S.fx.push({k:'t', x, y, col, t:now(),
+             ox:innerWidth/2 + (Math.random()*26-13), oy:innerHeight*1.04});
+  if(hit) S.fx.push({k:'i', x, y, col, t:now()+40});
+}
+function drawFX(){
+  const t=now();
+  for(let i=S.fx.length-1;i>=0;i--){
+    const f=S.fx[i], age=t-f.t;
+    if(age<0) continue;
+    if(f.k==='t'){
+      const life=150; if(age>life){ S.fx.splice(i,1); continue; }
+      const k=1-age/life;
+      octx.globalAlpha=k*0.9; octx.strokeStyle=f.col; octx.lineCap='round';
+      octx.lineWidth=1+2.5*k;
+      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
+      octx.globalAlpha=k; octx.fillStyle=f.col;
+      octx.beginPath(); octx.arc(f.x,f.y,2+3*k,0,7); octx.fill();
+    } else {
+      const life=340; if(age>life){ S.fx.splice(i,1); continue; }
+      const k=age/life, e=1-Math.pow(1-k,3);
+      octx.globalAlpha=(1-k)*0.95; octx.strokeStyle=f.col; octx.lineWidth=3*(1-k)+1;
+      octx.beginPath(); octx.arc(f.x,f.y, 8+46*e, 0, 7); octx.stroke();
+      for(let n=0;n<7;n++){
+        const a=n/7*6.283 + (f.x%1)*3, r0=10+50*e;
+        octx.beginPath();
+        octx.moveTo(f.x+Math.cos(a)*r0*0.7, f.y+Math.sin(a)*r0*0.7);
+        octx.lineTo(f.x+Math.cos(a)*r0, f.y+Math.sin(a)*r0);
+        octx.stroke();
+      }
+    }
+  }
+  octx.globalAlpha=1;
+}
+function drawOverlay(){
   sizeSilo();
   octx.clearRect(0,0,innerWidth,innerHeight);
-  if(S.mode!=='body' || S.overlay==='off') return;
+  if(S.mode==='body' && S.overlay!=='off') drawFigures();
+  drawFX();
+}
+function drawFigures(){
   const stale = now()-AI.t > 900;
   octx.globalAlpha = stale ? .35 : 1;
   const lockId = S.lock && S.lock.id;
@@ -1220,27 +1424,33 @@ function drawFigures(){
     const [x1,y1]=videoToScreen(fg.nb.x+fg.nb.w, fg.nb.y+fg.nb.h);
 
     if(fg.mask){
-      const {w,h,a,float}=fg.mask;
-      if(mcv.width!==w||mcv.height!==h){ mcv.width=ocv.width=w; mcv.height=ocv.height=h; }
-      const img=mctx.createImageData(w,h);
-      const rgb=hexToRgb(col);
-      for(let i=0,j=0;i<a.length;i++,j+=4){
-        const on = float ? a[i]>0.5 : a[i]>128;
-        if(!on) continue;
-        img.data[j]=rgb[0]; img.data[j+1]=rgb[1]; img.data[j+2]=rgb[2]; img.data[j+3]=255;
+      if(fg.built!==col){
+        const {w,h,a,float}=fg.mask;
+        if(mcv.width!==w||mcv.height!==h){ mcv.width=ocv.width=w; mcv.height=ocv.height=h; }
+        const img=mctx.createImageData(w,h);
+        const rgb=hexToRgb(col);
+        for(let i=0,j=0;i<a.length;i++,j+=4){
+          const on = float ? a[i]>0.5 : a[i]>128;
+          if(!on) continue;
+          img.data[j]=rgb[0]; img.data[j+1]=rgb[1]; img.data[j+2]=rgb[2]; img.data[j+3]=255;
+        }
+        mctx.putImageData(img,0,0);
+        const k=Math.max(1, Math.round(Math.min(w,h)*0.012));
+        octx2.clearRect(0,0,w,h);
+        octx2.globalCompositeOperation='source-over';
+        octx2.drawImage(mcv,0,0,w,h);
+        octx2.globalCompositeOperation='destination-out';
+        octx2.drawImage(mcv,k,k,w-k*2,h-k*2);
+        octx2.globalCompositeOperation='source-over';
+        fg.fill=document.createElement('canvas'); fg.fill.width=w; fg.fill.height=h;
+        fg.fill.getContext('2d').drawImage(mcv,0,0);
+        fg.line=document.createElement('canvas'); fg.line.width=w; fg.line.height=h;
+        fg.line.getContext('2d').drawImage(ocv,0,0);
+        fg.built=col;
       }
-      mctx.putImageData(img,0,0);
-      // dilate-minus-original leaves a clean contour
-      const k=Math.max(1, Math.round(Math.min(w,h)*0.012));
-      octx2.clearRect(0,0,w,h);
-      octx2.globalCompositeOperation='source-over';
-      octx2.drawImage(mcv,0,0,w,h);
-      octx2.globalCompositeOperation='destination-out';
-      octx2.drawImage(mcv,k,k,w-k*2,h-k*2);
-      octx2.globalCompositeOperation='source-over';
       const [sx0,sy0]=videoToScreen(0,0), [sx1,sy1]=videoToScreen(1,1);
-      octx.globalAlpha=(stale?.35:1)*0.14; octx.drawImage(mcv, sx0,sy0, sx1-sx0, sy1-sy0);
-      octx.globalAlpha=(stale?.35:1);      octx.drawImage(ocv, sx0,sy0, sx1-sx0, sy1-sy0);
+      octx.globalAlpha=(stale?.35:1)*0.14; octx.drawImage(fg.fill, sx0,sy0, sx1-sx0, sy1-sy0);
+      octx.globalAlpha=(stale?.35:1);      octx.drawImage(fg.line, sx0,sy0, sx1-sx0, sy1-sy0);
     } else if(fg.L){
       octx.strokeStyle=col; octx.lineWidth=3; octx.lineCap='round'; octx.lineJoin='round';
       octx.beginPath();
@@ -1361,7 +1571,7 @@ function acquire(){
   return best;
 }
 function fire(){
-  if(!S.started) return;
+  if(!S.started || S.phase!=='live') return;
   if(!S.me.alive) return;
   if(S.reloading) return;
   if(now()-S.lastShot < CFG.fireMs) return;
@@ -1370,12 +1580,14 @@ function fire(){
   SFX.shot(); buzz(12);
   $('#muzzle').classList.remove('on'); void $('#muzzle').offsetWidth; $('#muzzle').classList.add('on');
   $('#ret').classList.add('fire'); setTimeout(()=>$('#ret').classList.remove('fire'),90);
+  addTracer(innerWidth/2 + (Math.random()*10-5), innerHeight/2 + (Math.random()*10-5),
+            myColor(), !!S.lock);
 
   const t=S.lock;
   if(!t) return;
   if(t.drone){
     S.drone.hp--; SFX.hitmark();
-    if(S.drone.hp<=0){ S.me.kills++; paintScore(); banner('DRONE JATUH','+1');
+    if(S.drone.hp<=0){ S.me.kills++; paintScore(); banner(T('bDroneDown'),'+1');
       S.drone.el.remove(); S.drone=null; setTimeout(spawnDrone,900); }
     return;
   }
@@ -1383,8 +1595,10 @@ function fire(){
 }
 function takeHit(byId, dmg, head){
   if(!S.me.alive || now() < S.shieldUntil) return;
+  const col=colorOf(S.players.get(byId));
+  $('#flash').style.background=`radial-gradient(120% 90% at 50% 50%, transparent 34%, ${col} 100%)`;
   S.me.hp -= Math.min(CFG.headDmg, dmg || CFG.dmg); paintHP();
-  if(head) banner('KENA KEPALA','−'+CFG.headDmg);
+  if(head) banner(T('bHead'),'−'+CFG.headDmg);
   SFX.hurt(); buzz([28,50,28]);
   $('#flash').classList.remove('on'); void $('#flash').offsetWidth; $('#flash').classList.add('on');
   net.send({t:'hp', id:S.me.id, hp:Math.max(0,S.me.hp), alive:S.me.hp>0});
@@ -1397,15 +1611,15 @@ function down(byId, head){
   net.send({t:'tagged', by:byId, to:S.me.id, head:!!head});
   handle({t:'tagged', by:byId, to:S.me.id, head:!!head});
   let n=CFG.respawnMs/1000;
-  banner('TERTEMBAK', `respawn ${n}`, true);
-  const iv=setInterval(()=>{ n--; $('#bnS').textContent='respawn '+n;
+  banner(T('bTagged'), T('respawnIn', n), true);
+  const iv=setInterval(()=>{ n--; $('#bnS').textContent=T('respawnIn', n);
     if(n<=0){ clearInterval(iv); respawn(); } },1000);
 }
 function respawn(){
   S.me.hp=CFG.hp; S.me.alive=true; S.ammo=CFG.mag; S.reloading=false;
   S.shieldUntil = now() + CFG.shieldMs;
   paintHP(); paintAmmo(); SFX.spawn();
-  banner('AKTIF', `kebal ${(CFG.shieldMs/1000).toFixed(1).replace('.',',')} detik`);
+  banner(T('bActive'), T('bShield',(CFG.shieldMs/1000).toFixed(1)));
   net.send({t:'hp', id:S.me.id, hp:S.me.hp, alive:true, prot:true});
   setTimeout(()=>{
     S.shieldUntil=0; paintHP();
@@ -1441,24 +1655,74 @@ function loop(t){
   S.raf=requestAnimationFrame(loop);
   const dt=t-last; last=t;
   if(S.mode==='solo') moveDrone(dt);
+  if(S.trig && S.phase==='live') fire();
+  drawOverlay();
   if(t-S.scanT>70){
     S.scanT=t;
     S.lock = S.me.alive ? acquire() : null;
     $('#ret').classList.toggle('lock', !!S.lock);
     $('#lockName').textContent = S.lock ? S.lock.name : '';
     if(S.mode==='body' && t-(AI.last||0)>110){ AI.last=t; runDetect(); }
-    if(S.mode==='body') drawFigures();
     if(S.shieldUntil && now()>=S.shieldUntil){ S.shieldUntil=0; paintHP(); }
     if(S.mode==='band' || S.mode==='body') paintCal();
     paintDiag();
     if(S.mode==='field' && !S.pos && !S.gpsWarned && t-S.roundT>8000){
-      S.gpsWarned=true; banner('GPS MATI','mode lapangan butuh sinyal langit', true);
-      toast('Nggak ada fix GPS. Di dalam ruangan pakai mode Pita — keluar, lalu berpencar min. 10 m.', 6000);
+      S.gpsWarned=true; banner(T('bGps'), T('bGpsSub'), true);
+      toast(T('tNoGps'), 6000);
     }
     if(S.mode==='field'){ paintRadar();
       if(t-S.posT>500 && S.pos){ S.posT=t;
         net.send({t:'pos', id:S.me.id, lat:S.pos.lat, lng:S.pos.lng, head:S.heading}); } }
   }
+}
+
+/* ---------------- round phases ----------------
+   Sampling used to happen mid-fight, which meant the first thirty seconds were
+   spent tapping chips while being shot at. Now it is its own phase, and the
+   countdown only starts once everyone says they are ready. */
+function myColor(){
+  const c=S.cal[S.me.band];
+  return c ? `hsl(${c.hue} 92% 60%)` : bandOf(S.me.band).hex;
+}
+function foesOf(){ return [...S.players.values()].filter(p=>p.id!==S.me.id); }
+function paintPreroll(){
+  const box=$('#preroll'); if(!box) return;
+  box.hidden = S.phase!=='cal';
+  if(S.phase!=='cal') return;
+  const foes=foesOf(), rdy=foes.filter(p=>p.rdy).length + (S.ready?1:0);
+  $('#prerollTitle').textContent = T('calTitle');
+  $('#prerollHint').textContent = foes.length ? T('calHint') : T('calHintSolo');
+  $('#readyCount').textContent = T('readyN', rdy, foes.length+1);
+  const b=$('#btnReady');
+  b.textContent = !S.ready ? T('ready') : (S.isHost ? T('startNow') : T('waitReady'));
+  b.disabled = S.ready && !S.isHost;
+}
+function markReady(){
+  if(!S.ready){
+    S.ready=true; net.send({t:'ready', id:S.me.id}); paintPreroll();
+    if(S.isHost) checkAllReady();
+    return;
+  }
+  if(S.isHost){ net.send({t:'go'}); beginCountdown(); }
+}
+function checkAllReady(){
+  if(!S.isHost) return;
+  const foes=foesOf();
+  if(S.ready && foes.every(p=>p.rdy)){ net.send({t:'go'}); beginCountdown(); }
+}
+function beginCountdown(){
+  if(S.phase==='count' || S.phase==='live') return;
+  S.phase='count'; paintPreroll(); paintCal();
+  let n=CFG.countIn;
+  const tick=()=>{
+    if(n>0){ banner(String(n), '', false); tone(660,660,.08,'square',.14); n--; setTimeout(tick,700); }
+    else{
+      S.phase='live';
+      const sub={band:'bStartBand',body:'bStartBody',field:'bStartField',solo:'bStartSolo'}[S.mode];
+      banner(T('go'), T(sub)); tone(880,1320,.22,'triangle',.18); paintCal();
+    }
+  };
+  tick();
 }
 
 /* ---------------- round control ---------------- */
@@ -1472,34 +1736,40 @@ async function startRound(){
   $('#meName').textContent=S.me.name;
   $('#radar').hidden = S.mode!=='field';
   $('#btnView').hidden = S.mode!=='body';
-  $('#btnView').textContent = VIEW[S.overlay];
+  $('#btnView').textContent = T('view_'+S.overlay);
+  $('#pills').hidden = true; $('#btnMenu').setAttribute('aria-expanded','false');
   paintHP(); paintAmmo(); paintScore(); $('#feed').innerHTML='';
   show(''); $('#ar').classList.add('on');
   try{ await startCam(); }
   catch(e){ show('s-boot'); $('#ar').classList.remove('on');
-    return toast('Kamera ditolak. Butuh HTTPS + izin kamera.', 4200); }
+    return toast(T('tCam'), 4200); }
   if(S.mode==='body'){
-    banner('MEMUAT MODEL','sekali unduh, ±6 MB', true);
+    banner(T('bModel'), T('bModelSub'), true);
     const ok=await loadDetector();
     if(!ok){ S.mode='band';
-      toast('Model gagal dimuat, balik ke mode Pita. '+(AI.err||'cek koneksi'), 7000);
+      toast(T('tModel')+(AI.err||''), 7000);
       feed(`<b>AI: ${AI.err||'gagal memuat'}</b>`); }
   }
   if(S.mode==='field') await startSensors();
   if(S.mode==='solo') spawnDrone();
-  S.gpsWarned=false; S.roundT=performance.now(); S.blob={}; paintCal(); paintDiag();
-  banner('MULAI', S.mode==='band'?'bidik pita lawan':S.mode==='field'?'hadapkan HP ke lawan':'jatuhkan drone');
+  S.gpsWarned=false; S.roundT=performance.now(); S.blob={}; paintDiag();
+  S.ready=false; S.fx.length=0;
+  [...S.players.values()].forEach(p=>{ p.rdy=false; });
+  S.phase = (S.mode==='band'||S.mode==='body') && foesOf().length ? 'cal' : 'count';
+  paintPreroll(); paintCal();
+  if(S.phase==='count') beginCountdown();
+
   last=performance.now(); S.raf=requestAnimationFrame(loop);
 }
 function endRound(){
   S.started=false; stopAR();
   const list=[...(S.players.size?S.players.values():[S.me])].sort((a,b)=>(b.kills||0)-(a.kills||0));
-  $('#endTitle').innerHTML = list[0] && list[0].id===S.me.id ? 'Kamu<em>menang</em>' : 'Hasil<em>ronde</em>';
+  $('#endTitle').innerHTML = list[0] && list[0].id===S.me.id ? `<em>${T('win')}</em>` : `<em>${T('result')}</em>`;
   $('#endBoard').innerHTML = list.map((p,i)=>`<div class="row">
       <span class="st">${String(i+1).padStart(2,'0')}</span>
       <span class="chip" style="background:${bandOf(p.band).hex};color:${bandOf(p.band).hex}"></span>
       <span class="nm">${p.name}</span>
-      <span class="st">${p.kills||0} tag · ${p.deaths||0} kena</span></div>`).join('');
+      <span class="st">${T('tags', p.kills||0, p.deaths||0)}</span></div>`).join('');
   show('s-end');
 }
 
@@ -1526,13 +1796,30 @@ function endRound(){
 })();
 
 /* ---------------- input ---------------- */
-$$('.fire').forEach(b=>b.addEventListener('pointerdown', e=>{ e.preventDefault(); fire(); }));
+function trigDown(e){ e.preventDefault(); S.trig=true; fire(); }
+function trigUp(){ S.trig=false; }
+$$('.fire').forEach(b=>{
+  b.addEventListener('pointerdown', trigDown);
+  b.addEventListener('pointerup', trigUp);
+  b.addEventListener('pointercancel', trigUp);
+  b.addEventListener('pointerleave', trigUp);
+});
+addEventListener('pointerup', trigUp);
 $('#btnReload').onclick = reload;
 $('#btnView').onclick = cycleView;
+$('#btnReady').onclick = markReady;
+$('#btnMenu').onclick = ()=>{
+  const p=$('#pills'); p.hidden=!p.hidden;
+  $('#btnMenu').setAttribute('aria-expanded', String(!p.hidden));
+};
+$('#btnDiag').onclick = ()=>{ S.diag=!S.diag; paintDiag(); };
+$('#btnLangGame').onclick = ()=>{ LANG = LANG==='en'?'id':'en'; applyLang(); };
 $('#btnQuit').onclick = ()=>{ endRound(); };
-$('#ar').addEventListener('pointerdown', e=>{ if(e.target.closest('.hud')) return; fire(); });
-window.addEventListener('keydown', e=>{ if(!S.started) return;
-  if(e.code==='Space'){ e.preventDefault(); fire(); } if(e.key==='r') reload(); });
+$('#ar').addEventListener('pointerdown', e=>{ if(e.target.closest('.hud')) return; trigDown(e); });
+addEventListener('keydown', e=>{ if(!S.started) return;
+  if(e.code==='Space'){ e.preventDefault(); S.trig=true; fire(); } if(e.key==='r') reload(); });
+addEventListener('keyup', e=>{ if(e.code==='Space') S.trig=false; });
+applyLang();
 paintRoster();
 
 </script>
