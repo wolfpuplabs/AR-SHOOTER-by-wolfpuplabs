@@ -848,7 +848,8 @@ function handle(d){
     case 'tagged': {
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
-      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?T('bHead'):T('bTag'),'+1'); }
+      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?T('bHead'):T('bTag'),'+1');
+        S.fx.push({k:'i', x:innerWidth/2, y:innerHeight/2, col:myColor(), seed:Math.random()*6.283, t:now()}); }
       feed(T(d.head?'feedHead':'feedTag', `<b>${by?by.name:'?'}</b>`, `<b>${to?to.name:'?'}</b>`));
       paintScore();
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
@@ -1363,38 +1364,85 @@ function cycleView(){
    with the shooter's own mark colour, so a burst reads as your fire and not
    someone else's. */
 function addTracer(x,y,col,hit){
-  S.fx.push({k:'t', x, y, col, t:now(),
-             ox:innerWidth/2 + (Math.random()*26-13), oy:innerHeight*1.04});
-  if(hit) S.fx.push({k:'i', x, y, col, t:now()+40});
+  const seed=Math.random()*6.283;
+  S.fx.push({k:'t', x, y, col, seed, t:now(),
+             ox:innerWidth/2 + (Math.random()*20-10), oy:innerHeight*1.08 });
+  S.fx.push({k:'m', x:innerWidth/2, y:innerHeight*0.995, col, t:now()});
+  if(hit) S.fx.push({k:'i', x, y, col, seed, t:now()+50});
 }
+const rgba=(c,a)=>{ const [r,g,b]=hexToRgb(c); return `rgba(${r},${g},${b},${a})`; };
+const U=()=>Math.min(innerWidth,innerHeight)/420;   // effects scale with the screen
+
+/* The reference look is additive light: a white-hot core inside a fat coloured
+   bloom, tapering with perspective, and an impact that reads as a splash of
+   light on the surface rather than an outline. */
 function drawFX(){
-  const t=now();
+  if(!S.fx.length) return;
+  const t=now(), u=U();
+  octx.save();
+  octx.globalCompositeOperation='lighter';
+  octx.lineCap='round';
+
   for(let i=S.fx.length-1;i>=0;i--){
     const f=S.fx[i], age=t-f.t;
     if(age<0) continue;
-    if(f.k==='t'){
-      const life=150; if(age>life){ S.fx.splice(i,1); continue; }
-      const k=1-age/life;
-      octx.globalAlpha=k*0.9; octx.strokeStyle=f.col; octx.lineCap='round';
-      octx.lineWidth=1+2.5*k;
+
+    if(f.k==='m'){                                   // muzzle bloom
+      const life=110; if(age>life){ S.fx.splice(i,1); continue; }
+      const k=1-age/life, r=52*u*k;
+      const g=octx.createRadialGradient(f.x,f.y,0,f.x,f.y,r);
+      g.addColorStop(0, `rgba(255,255,255,${.75*k})`);
+      g.addColorStop(.35, rgba(f.col,.55*k));
+      g.addColorStop(1, rgba(f.col,0));
+      octx.fillStyle=g; octx.beginPath(); octx.arc(f.x,f.y,r,0,7); octx.fill();
+
+    } else if(f.k==='t'){                            // tapered beam
+      const life=230; if(age>life){ S.fx.splice(i,1); continue; }
+      const k=Math.pow(1-age/life, 1.6);
+      const ang=Math.atan2(f.y-f.oy, f.x-f.ox);
+      const px=Math.cos(ang+Math.PI/2), py=Math.sin(ang+Math.PI/2);
+      const w0=30*u*k, w1=5*u*k;                     // wide at the muzzle, thin downrange
+      const g=octx.createLinearGradient(f.ox,f.oy,f.x,f.y);
+      g.addColorStop(0, rgba(f.col,.05*k));
+      g.addColorStop(.25, rgba(f.col,.42*k));
+      g.addColorStop(1, rgba(f.col,.62*k));
+      octx.fillStyle=g;
+      octx.beginPath();
+      octx.moveTo(f.ox+px*w0, f.oy+py*w0);
+      octx.lineTo(f.x +px*w1, f.y +py*w1);
+      octx.lineTo(f.x -px*w1, f.y -py*w1);
+      octx.lineTo(f.ox-px*w0, f.oy-py*w0);
+      octx.closePath(); octx.fill();
+      octx.strokeStyle=rgba(f.col,.55*k); octx.lineWidth=9*u*k;
       octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
-      octx.globalAlpha=k; octx.fillStyle=f.col;
-      octx.beginPath(); octx.arc(f.x,f.y,2+3*k,0,7); octx.fill();
-    } else {
-      const life=340; if(age>life){ S.fx.splice(i,1); continue; }
-      const k=age/life, e=1-Math.pow(1-k,3);
-      octx.globalAlpha=(1-k)*0.95; octx.strokeStyle=f.col; octx.lineWidth=3*(1-k)+1;
-      octx.beginPath(); octx.arc(f.x,f.y, 8+46*e, 0, 7); octx.stroke();
-      for(let n=0;n<7;n++){
-        const a=n/7*6.283 + (f.x%1)*3, r0=10+50*e;
+      octx.strokeStyle=`rgba(255,255,255,${.9*k})`; octx.lineWidth=2.6*u*k;
+      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
+
+    } else {                                         // impact splash
+      const life=560; if(age>life){ S.fx.splice(i,1); continue; }
+      const p=age/life, e=1-Math.pow(1-p,3), k=1-p;
+      const r=(14+58*e)*u;
+      for(let n=0;n<3;n++){                          // offset blobs give it an irregular edge
+        const a2=f.seed+n*2.1, d=r*0.24*n;
+        const cx=f.x+Math.cos(a2)*d, cy=f.y+Math.sin(a2)*d, rr=r*(1-n*0.16);
+        const g=octx.createRadialGradient(cx,cy,0,cx,cy,rr);
+        g.addColorStop(0, `rgba(255,255,255,${.85*k*k})`);
+        g.addColorStop(.28, rgba(f.col,.7*k));
+        g.addColorStop(.62, rgba(f.col,.28*k));
+        g.addColorStop(1, rgba(f.col,0));
+        octx.fillStyle=g; octx.beginPath(); octx.arc(cx,cy,rr,0,7); octx.fill();
+      }
+      octx.strokeStyle=rgba(f.col,.5*k*k); octx.lineWidth=2*u;
+      for(let n=0;n<8;n++){                          // short light spatter
+        const a2=f.seed+n*0.785, r0=r*0.55, r1=r*(0.95+((n*37)%13)/26);
         octx.beginPath();
-        octx.moveTo(f.x+Math.cos(a)*r0*0.7, f.y+Math.sin(a)*r0*0.7);
-        octx.lineTo(f.x+Math.cos(a)*r0, f.y+Math.sin(a)*r0);
+        octx.moveTo(f.x+Math.cos(a2)*r0, f.y+Math.sin(a2)*r0);
+        octx.lineTo(f.x+Math.cos(a2)*r1, f.y+Math.sin(a2)*r1);
         octx.stroke();
       }
     }
   }
-  octx.globalAlpha=1;
+  octx.restore();
 }
 function drawOverlay(){
   sizeSilo();
@@ -1487,14 +1535,18 @@ function drawFigures(){
   octx.globalAlpha=1;
 }
 function hexToRgb(c){
+  if(c.startsWith('rgb')){ const m=c.match(/[\d.]+/g)||[]; return [ +m[0]||233, +m[1]||239, +m[2]||250 ]; }
   if(c.startsWith('hsl')){
     const [h,s,l]=c.match(/[\d.]+/g).map(Number);
     const a=s/100*Math.min(l/100,1-l/100);
     const f=n=>{const k=(n+h/30)%12; return Math.round(255*(l/100-a*Math.max(-1,Math.min(k-3,9-k,1))));};
     return [f(0),f(8),f(4)];
   }
+  // `parseInt('00',16) || 233` silently turned every zero channel into the
+  // fallback, which bleached cyan and lime into near-white
   const m=c.replace('#','');
-  return [parseInt(m.slice(0,2),16)||233, parseInt(m.slice(2,4),16)||239, parseInt(m.slice(4,6),16)||250];
+  const ch=(i)=>{ const v=parseInt(m.slice(i,i+2),16); return Number.isFinite(v) ? v : 200; };
+  return [ch(0), ch(2), ch(4)];
 }
 function maskAt(fg, nx, ny){
   if(!fg.mask) return false;
