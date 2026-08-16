@@ -974,6 +974,10 @@ async function startSensors(){
   window.addEventListener('deviceorientationabsolute', onOri, true);
   window.addEventListener('deviceorientation', onOri, true);
   stopSensors();
+  if(!navigator.geolocation){   // absent on insecure origins and some browsers
+    toast(T('tGpsDenied'), 6000);
+    return;
+  }
   geoWatch = navigator.geolocation.watchPosition(
     p=>{ S.pos={lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy}; },
     e=>{ S.geoErr = e.code===1 ? T('geoDenied') : T('geoNone');
@@ -1815,13 +1819,13 @@ function checkAllReady(){
   if(S.ready && foes.every(p=>p.rdy)){ net.send({t:'go'}); beginCountdown(); }
 }
 function beginCountdown(){
-  if(S.phase==='count' || S.phase==='live') return;
-  S.phase='count'; paintPreroll(); paintCal();
+  if(S.counting || S.phase==='live') return;   // idempotent: 'go' can arrive twice
+  S.counting=true; S.phase='count'; paintPreroll(); paintCal();
   let n=CFG.countIn;
   const tick=()=>{
     if(n>0){ banner(String(n), '', false); tone(660,660,.08,'square',.14); n--; setTimeout(tick,700); }
     else{
-      S.phase='live';
+      S.phase='live'; S.counting=false;
       const sub={band:'bStartBand',body:'bStartBody',field:'bStartField',solo:'bStartSolo'}[S.mode];
       banner(T('go'), T(sub)); tone(880,1320,.22,'triangle',.18); paintCal();
     }
@@ -1854,19 +1858,19 @@ async function startRound(){
       toast(T('tModel')+(AI.err||''), 7000);
       feed(`<b>AI: ${AI.err||'gagal memuat'}</b>`); }
   }
-  if(S.mode==='field') await startSensors();
+  if(S.mode==='field'){ try{ await startSensors(); }catch(e){ toast(T('tGpsDenied'), 6000); } }
   if(S.mode==='solo') spawnDrone();
   S.gpsWarned=false; S.roundT=performance.now(); S.blob={}; paintDiag();
-  S.ready=false; S.fx.length=0;
+  S.ready=false; S.counting=false; S.fx.length=0;
   [...S.players.values()].forEach(p=>{ p.rdy=false; });
-  S.phase = (S.mode==='band'||S.mode==='body') && foesOf().length ? 'cal' : 'count';
+  S.phase = (S.mode==='band'||S.mode==='body') && foesOf().length ? 'cal' : 'pre';
   paintPreroll(); paintCal();
-  if(S.phase==='count') beginCountdown();
+  if(S.phase!=='cal') beginCountdown();
 
   last=performance.now(); S.raf=requestAnimationFrame(loop);
 }
 function endRound(){
-  S.started=false; stopAR();
+  S.started=false; S.counting=false; S.trig=false; S.phase='pre'; stopAR();
   const list=[...(S.players.size?S.players.values():[S.me])].sort((a,b)=>(b.kills||0)-(a.kills||0));
   $('#endTitle').innerHTML = list[0] && list[0].id===S.me.id ? `<em>${T('win')}</em>` : `<em>${T('result')}</em>`;
   $('#endBoard').innerHTML = list.map((p,i)=>`<div class="row">
