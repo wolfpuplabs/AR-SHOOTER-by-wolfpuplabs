@@ -277,6 +277,15 @@ input:focus{border-color:var(--peri);outline:none}
   width:min(420px,calc(100% - 24px));text-align:center;border-radius:20px;padding:16px 18px;z-index:4}
 .preroll b{display:block;font-size:1.05rem;margin-bottom:6px}
 .preroll p{font-size:.8rem;color:var(--dim);line-height:1.5}
+#calList{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.calrow{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:14px;
+  background:rgba(9,12,18,.55);border:1px solid var(--edge);text-align:left;transition:border-color .18s}
+.calrow i{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 10px currentColor}
+.calrow .n{flex:1;font-weight:600;font-size:.9rem}
+.calrow .s{font-family:'Martian Mono',monospace;font-size:.6rem;color:var(--dim);letter-spacing:.06em}
+.calrow.done{border-color:rgba(139,255,199,.5)}
+.calrow.done .s{color:var(--ok)}
+.calrow.seen{border-color:var(--edge-hi)}
 .prerow{display:flex;align-items:center;gap:12px;margin-top:14px}
 .prerow .btn{padding:13px 18px;font-size:.9rem}
 #readyCount{font-size:.68rem;color:var(--dim);white-space:nowrap}
@@ -383,11 +392,13 @@ input:focus{border-color:var(--peri);outline:none}
     <div id="calbar" hidden></div>
     <div class="glass" id="diag" hidden></div>
     <div class="preroll glass" id="preroll" hidden>
-      <b id="prerollTitle">Kalibrasi</b>
-      <p id="prerollHint">Bidik tiap lawan, lalu tap namanya untuk menyampel warna.</p>
+      <b id="prerollTitle">Calibrate first</b>
+      <p id="prerollHint">Aim at each opponent and tap their name.</p>
+      <div id="calList"></div>
       <div class="prerow">
         <span id="readyCount" class="mono"></span>
-        <button class="btn" id="btnReady">Siap</button>
+        <button class="btn" id="btnReady" hidden>Ready</button>
+        <button class="mini" id="btnSkip" hidden>Skip</button>
       </div>
     </div>
     <div class="bot">
@@ -612,13 +623,13 @@ document.addEventListener('touchend', e=>{
 
 /* Nothing here has a console attached on a phone, so failures must announce
    themselves on screen or they look like "the button does nothing". */
-addEventListener('error', e=>{
-  const m=(e.message||'error')+(e.lineno?` @${e.lineno}`:'');
-  try{ toast('Galat: '+m, 8000); }catch(_){}
-});
-addEventListener('unhandledrejection', e=>{
-  try{ toast('Galat async: '+((e.reason&&e.reason.message)||e.reason), 8000); }catch(_){}
-});
+S.errs=[];
+function logErr(m){
+  S.errs.unshift(String(m).slice(0,90)); S.errs.length=Math.min(S.errs.length,4);
+  if(!S.started){ try{ toast('Galat: '+m, 8000); }catch(_){} }   // menus still surface it
+}
+addEventListener('error', e=>logErr((e.message||'error')+(e.lineno?` @${e.lineno}`:'')));
+addEventListener('unhandledrejection', e=>logErr((e.reason&&e.reason.message)||e.reason));
 
 
 /* ---------------- i18n (English default) ---------------- */
@@ -653,6 +664,7 @@ const I18N={
   reload:'Reload', diag:'Diagnostics', quit:'Quit', lang:'EN',
   calTitle:'Calibrate first', calHint:'Aim at each opponent and tap their name to sample the colour they are wearing.',
   calHintSolo:'Get ready.', ready:'Ready', startNow:'Start now', readyN:'{0}/{1} ready',
+  stDone:'sampled', stTap:'tap to sample', stAim:'aim at them', stRemaining:'{0} left', skip:'Skip',
   waitReady:'Waiting for the others…', go:'GO',
   bTagged:'DOWN', bHead:'HEADSHOT', bTag:'TAG', bActive:'BACK IN', bShield:'immune {0}s',
   bStartBand:'aim at their tape', bStartBody:'aim at the person', bStartField:'face your opponent',
@@ -706,6 +718,7 @@ const I18N={
   reload:'Isi ulang', diag:'Diagnosis', quit:'Keluar', lang:'ID',
   calTitle:'Kalibrasi dulu', calHint:'Bidik tiap lawan, lalu tap namanya untuk menyampel warna yang dia pakai.',
   calHintSolo:'Bersiap.', ready:'Siap', startNow:'Mulai sekarang', readyN:'{0}/{1} siap',
+  stDone:'tersampel', stTap:'tap untuk sampel', stAim:'bidik dulu', stRemaining:'sisa {0}', skip:'Lewati',
   waitReady:'Menunggu yang lain…', go:'MULAI',
   bTagged:'TUMBANG', bHead:'HEADSHOT', bTag:'TAG', bActive:'AKTIF', bShield:'kebal {0} dtk',
   bStartBand:'bidik pitanya', bStartBody:'bidik orangnya', bStartField:'hadapkan HP ke lawan',
@@ -742,6 +755,7 @@ function applyLang(){
   const r=$('#btnReload'); if(r) r.textContent=T('reload');
   const dg=$('#btnDiag'); if(dg) dg.textContent=T('diag');
   const q=$('#btnQuit'); if(q) q.textContent=T('quit');
+  const sk=$('#btnSkip'); if(sk) sk.textContent=T('skip');
   document.querySelectorAll('[data-val]').forEach(el=>{ el.textContent=T(el.dataset.val); });
   paintRoster(); paintLobbyMode(); paintPreroll();
 }
@@ -889,7 +903,7 @@ function handle(d){
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
       if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?T('bHead'):T('bTag'),'+1');
-        S.fx.push({k:'i', x:innerWidth/2, y:innerHeight/2, col:myColor(), seed:Math.random()*6.283, t:now()}); }
+        addImpact(innerWidth/2, innerHeight/2, myColor()); }
       feed(T(d.head?'feedHead':'feedTag', `<b>${by?by.name:'?'}</b>`, `<b>${to?to.name:'?'}</b>`));
       paintScore();
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
@@ -1145,7 +1159,8 @@ function sampleColor(bandKey, label){
 function paintCal(){
   const bar=$('#calbar');
   if(S.mode!=='band' && S.mode!=='body'){ bar.hidden=true; return; }
-  if(S.phase!=='cal' && S.overlay==='off'){ bar.hidden=true; return; }
+  if(S.phase==='cal'){ bar.hidden=true; return; }          // the panel replaces it
+  if(S.overlay==='off'){ bar.hidden=true; return; }
   const foes=[...S.players.values()].filter(p=>p.id!==S.me.id);
   bar.hidden = !foes.length;
   bar.innerHTML = foes.map(p=>{
@@ -1195,6 +1210,7 @@ function paintDiag(){
     L.push(`butuh ${CFG.minBlob}px + gumpalan padat buat lock`);
     L.push(`tap chip = sampel warna · tahan 0,7s = hapus`);
   }
+  if(S.errs && S.errs.length) L.push('galat: '+S.errs[0]);
   $('#diag').innerHTML=L.map(x=>`<b>${x}</b>`).join('\n');
 }
 $('#score').addEventListener('click', ()=>{ S.diag=!S.diag; paintDiag(); });
@@ -1469,6 +1485,7 @@ function drawFX(){
     }
 
     // impact
+    if(f.k!=='imp' || !f.parts){ S.fx.splice(i,1); continue; }
     const life=420; if(age>life){ S.fx.splice(i,1); continue; }
     const k=age/life, e=1-Math.pow(1-k,3), fade=1-k;
 
@@ -1773,6 +1790,7 @@ function loop(t){
     if(S.mode==='body' && t-(AI.last||0)>110){ AI.last=t; runDetect(); }
     if(S.shieldUntil && now()>=S.shieldUntil){ S.shieldUntil=0; paintHP(); }
     if(S.mode==='band' || S.mode==='body') paintCal();
+    if(S.phase==='cal') paintPreroll();
     paintDiag();
     if(S.mode==='field' && !S.pos && !S.gpsWarned && t-S.roundT>8000){
       S.gpsWarned=true; banner(T('bGps'), T('bGpsSub'), true);
@@ -1793,18 +1811,50 @@ function myColor(){
   return c ? `hsl(${c.hue} 92% 60%)` : bandOf(S.me.band).hex;
 }
 function foesOf(){ return [...S.players.values()].filter(p=>p.id!==S.me.id); }
+/* One panel drives the whole pre-round: tap a name to sample it, and the Ready
+   button only appears once every opponent has been sampled — no more hunting
+   for a button while chips and hints stack on top of each other. */
+function seenNow(p){
+  if(S.mode==='body') return AI.figs.some(f=>f.p && f.p.id===p.id) || AI.figs.length>0;
+  return (S.blob[p.band]||0) >= CFG.minBlob;
+}
 function paintPreroll(){
   const box=$('#preroll'); if(!box) return;
   box.hidden = S.phase!=='cal';
   if(S.phase!=='cal') return;
-  const foes=foesOf(), rdy=foes.filter(p=>p.rdy).length + (S.ready?1:0);
+  const foes=foesOf(), list=$('#calList');
   $('#prerollTitle').textContent = T('calTitle');
   $('#prerollHint').textContent = foes.length ? T('calHint') : T('calHintSolo');
-  $('#readyCount').textContent = T('readyN', rdy, foes.length+1);
+
+  if(list.dataset.n !== String(foes.length)){
+    list.innerHTML = foes.map(p=>`<button class="calrow" data-id="${p.id}" data-band="${p.band}" data-nm="${p.name}">
+      <i></i><span class="n">${p.name}</span><span class="s"></span></button>`).join('');
+    list.dataset.n = String(foes.length);
+  }
+  foes.forEach(p=>{
+    const row=list.querySelector(`[data-id="${p.id}"]`); if(!row) return;
+    const done=!!S.cal[p.band], seen=seenNow(p);
+    const col = done ? `hsl(${S.cal[p.band].hue} 92% 60%)` : bandOf(p.band).hex;
+    row.querySelector('i').style.cssText=`background:${col};color:${col}`;
+    row.querySelector('.s').textContent = done ? T('stDone') : (seen ? T('stTap') : T('stAim'));
+    row.classList.toggle('done', done);
+    row.classList.toggle('seen', !done && seen);
+  });
+
+  const all = foes.length>0 && foes.every(p=>S.cal[p.band]);
+  const rdy = foes.filter(p=>p.rdy).length + (S.ready?1:0);
   const b=$('#btnReady');
+  b.hidden = !all && !S.ready;
   b.textContent = !S.ready ? T('ready') : (S.isHost ? T('startNow') : T('waitReady'));
   b.disabled = S.ready && !S.isHost;
+  $('#readyCount').textContent = all||S.ready ? T('readyN', rdy, foes.length+1) : T('stRemaining', foes.filter(p=>!S.cal[p.band]).length);
+  $('#btnSkip').hidden = !(S.isHost && !all && now()-S.roundT>10000);
 }
+$('#calList').addEventListener('click', e=>{
+  const r=e.target.closest('.calrow'); if(!r) return;
+  sampleColor(r.dataset.band, r.dataset.nm);
+  paintPreroll();
+});
 function markReady(){
   if(!S.ready){
     S.ready=true; net.send({t:'ready', id:S.me.id}); paintPreroll();
@@ -1916,6 +1966,7 @@ addEventListener('pointerup', trigUp);
 $('#btnReload').onclick = reload;
 $('#btnView').onclick = cycleView;
 $('#btnReady').onclick = markReady;
+$('#btnSkip').onclick = ()=>{ net.send({t:'go'}); beginCountdown(); };
 $('#btnMenu').onclick = ()=>{
   const p=$('#pills'); p.hidden=!p.hidden;
   $('#btnMenu').setAttribute('aria-expanded', String(!p.hidden));
