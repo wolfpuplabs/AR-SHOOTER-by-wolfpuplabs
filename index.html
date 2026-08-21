@@ -36,7 +36,7 @@ input{-webkit-user-select:text;user-select:text}
 img,video,canvas,svg{-webkit-user-drag:none;user-select:none}
 button,.opt,.band,.cal,.mini,.fire,.btn{touch-action:manipulation;-webkit-touch-callout:none}
 #ar{touch-action:none}
-html,body{height:100svh;overflow:hidden;background:var(--bg);color:var(--ink);
+html,body{height:100dvh;min-height:100vh;overflow:hidden;background:#05070B;background:var(--bg);color:var(--ink);
   font-family:'Instrument Sans',system-ui,sans-serif;overscroll-behavior:none;
   font-size:clamp(15px,1.6vh + .6vw,17px)}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
@@ -155,7 +155,7 @@ input:focus{border-color:var(--peri);outline:none}
   -webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* ---------- AR layer ---------- */
-#ar{position:fixed;left:0;right:0;top:0;height:var(--vh,100svh);background:#000;z-index:5;display:none}
+#ar{position:fixed;left:0;right:0;top:0;height:100vh;height:var(--vh,100vh);height:100dvh;background:#000;z-index:5;display:none}
 #ar.on{display:block}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #scan{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
@@ -165,7 +165,7 @@ input:focus{border-color:var(--peri);outline:none}
   background:radial-gradient(120% 88% at 50% 46%,transparent 46%,rgba(0,0,0,.55) 100%)}
 
 /* reticle */
-#ret{position:absolute;left:50%;top:50%;width:clamp(58px,15vmin,86px);height:clamp(58px,15vmin,86px);
+#ret{position:absolute;left:50%;top:50%;width:clamp(52px,11vmin,78px);height:clamp(52px,11vmin,78px);
   transform:translate(-50%,-50%);margin:0;pointer-events:none;
   transition:transform .13s cubic-bezier(.2,.9,.3,1)}
 #ret svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
@@ -223,20 +223,20 @@ input:focus{border-color:var(--peri);outline:none}
 /* top: two team bars flanking a round counter */
 .topbar{display:flex;justify-content:center}
 .tscore{display:flex;align-items:center;gap:10px}
-.tbar{width:clamp(64px,22vw,150px);height:9px;background:rgba(255,255,255,.1);position:relative;
+.tbar{width:clamp(58px,16vmin,140px);height:8px;background:rgba(255,255,255,.1);position:relative;
   clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
 .tbar i{position:absolute;inset:0;transform-origin:left;transition:transform .3s}
 .tbar.r{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 100%,8px 100%)}
 .tbar.r i{transform-origin:right}
-.orb{width:clamp(44px,13vw,60px);height:clamp(44px,13vw,60px);border-radius:50%;
+.orb{width:clamp(42px,9vmin,58px);height:clamp(42px,9vmin,58px);border-radius:50%;
   border:1px solid rgba(63,224,255,.5);background:rgba(6,12,20,.72);display:grid;place-items:center;
-  font-family:'Martian Mono',monospace;font-weight:800;font-size:clamp(.9rem,4vw,1.2rem);
+  font-family:'Martian Mono',monospace;font-weight:800;font-size:clamp(.85rem,2.8vmin,1.15rem);
   box-shadow:0 0 20px -8px var(--cy)}
 .orb small{display:block;font-size:.42rem;letter-spacing:.2em;color:var(--dim);font-weight:400}
 
 /* left nameplates */
 .plates{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
-.plate2{min-width:min(190px,44vw);background:rgba(6,12,20,.6);border:1px solid;padding:5px 10px 6px;
+.plate2{min-width:clamp(120px,26vmin,190px);background:rgba(6,12,20,.6);border:1px solid;padding:5px 10px 6px;
   clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)}
 .plate2 .n{font-family:'Martian Mono',monospace;font-size:.62rem;letter-spacing:.16em;font-weight:700}
 .plate2 .b{height:4px;margin-top:5px;background:rgba(255,255,255,.14)}
@@ -278,7 +278,7 @@ input:focus{border-color:var(--peri);outline:none}
 .vrow{display:flex;align-items:baseline;gap:5px;margin-top:1px}
 .wpn .vrow{justify-content:flex-end}
 .big{font-family:'Martian Mono',monospace;font-weight:800;color:var(--yl);line-height:1;
-  font-size:clamp(1.7rem,7.5vw,2.5rem);text-shadow:0 0 18px rgba(255,212,0,.35)}
+  font-size:clamp(1.5rem,5.6vmin,2.3rem);text-shadow:0 0 18px rgba(255,212,0,.35)}
 .big.empty{color:var(--mg)}
 .unit{font-family:'Martian Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:.1em}
 .hpbar{height:5px;margin-top:5px;background:rgba(255,255,255,.12);
@@ -290,8 +290,8 @@ input:focus{border-color:var(--peri);outline:none}
 #protTag{font-family:'Martian Mono',monospace;color:var(--cy);letter-spacing:.16em;font-size:.5rem;
   border:1px solid rgba(63,224,255,.5);padding:1px 5px;margin-left:6px}
 .mag{display:flex;flex-flow:column-reverse wrap;gap:3px;margin-top:7px;
-  max-height:clamp(56px,16vh,96px);align-content:flex-end;direction:rtl}
-.round{width:clamp(5px,1.5vw,7px);height:clamp(9px,2.4vw,12px);background:rgba(255,255,255,.13);
+  max-height:clamp(44px,11vmin,80px);align-content:flex-end;direction:rtl}
+.round{width:clamp(4px,1.1vmin,7px);height:clamp(8px,2vmin,12px);background:rgba(255,255,255,.13);
   transition:background .16s,box-shadow .16s,opacity .16s}
 .round.live{background:var(--yl);box-shadow:0 0 8px -1px var(--yl)}
 .round.spent{opacity:.3}
@@ -299,7 +299,7 @@ input:focus{border-color:var(--peri);outline:none}
 @keyframes feedin{from{opacity:.1;transform:translateY(4px)}}
 
 /* scope ring around the crosshair */
-#scope{position:absolute;left:50%;top:50%;width:min(64vw,40vmin);height:min(64vw,40vmin);
+#scope{position:absolute;left:50%;top:50%;width:clamp(180px,32vmin,340px);height:clamp(180px,32vmin,340px);
   transform:translate(-50%,-50%);pointer-events:none;opacity:.36;transition:opacity .2s,transform .2s}
 #scope svg{width:100%;height:100%;overflow:visible}
 #scope .sr{fill:none;stroke:rgba(233,239,250,.55);stroke-width:1.4}
@@ -320,7 +320,7 @@ input:focus{border-color:var(--peri);outline:none}
 #feed{font-family:'Martian Mono',monospace;font-size:.54rem;line-height:1.9;color:var(--dim);
   letter-spacing:.05em;text-align:right}
 #feed b{color:var(--cy)}
-#radar{width:clamp(66px,17vw,92px);height:clamp(66px,17vw,92px);flex:none;border-radius:50%;
+#radar{width:clamp(60px,13vmin,92px);height:clamp(60px,13vmin,92px);flex:none;border-radius:50%;
   border:1px solid rgba(63,224,255,.4);background:rgba(6,12,20,.6);box-shadow:0 0 18px -8px var(--cy)}
 
 
@@ -410,7 +410,7 @@ input:focus{border-color:var(--peri);outline:none}
   .hud{--hpadX:clamp(14px,2.6vw,34px);--hpadY:clamp(12px,2.6vh,26px)}
   .anchor.tr{max-width:26vw}
   .anchor.bc{width:min(420px,40vw)}
-  #scope{width:min(34vmin,300px);height:min(34vmin,300px)}
+  #scope{width:clamp(190px,28vmin,320px);height:clamp(190px,28vmin,320px)}
 }
 @media (max-height:520px){
   .trigger{--tw:clamp(58px,13vh,78px)}
@@ -900,9 +900,17 @@ document.querySelectorAll('[data-lang-toggle]').forEach(b=>{
 
 /* Safari's toolbars change the visible box without changing innerHeight, which
    is how the ammo panel ended up sliced off the bottom. Measure it for real. */
+function hasDvh(){
+  try{ return !!(window.CSS && CSS.supports && CSS.supports('height','100dvh')); }
+  catch(e){ return false; }
+}
 function fitViewport(){
+  if(hasDvh()){                       // let the browser own it; a stale JS value
+    if(S.started){ try{ sizeSilo(); }catch(e){} }   // was what shrank the view
+    return;
+  }
   const vv=window.visualViewport;
-  const h=Math.round(vv ? vv.height : innerHeight);
+  const h=Math.round(Math.max(vv?vv.height:0, document.documentElement.clientHeight||0, innerHeight||0));
   document.documentElement.style.setProperty('--vh', h+'px');
   if(typeof sizeSilo==='function' && S.started){ try{ sizeSilo(); }catch(e){} }
 }
