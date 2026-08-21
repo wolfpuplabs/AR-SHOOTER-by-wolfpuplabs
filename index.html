@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0B0E14">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>TANDA / AR Laser Tag</title>
+<title>AR-SHOOTER</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Martian+Mono:wght@400;600;800&display=swap" rel="stylesheet">
@@ -164,26 +164,21 @@ input:focus{border-color:var(--peri);outline:none}
   background:radial-gradient(120% 88% at 50% 46%,transparent 46%,rgba(0,0,0,.55) 100%)}
 
 /* reticle */
-#ret{position:absolute;left:50%;top:50%;width:clamp(132px,42vmin,190px);height:clamp(132px,42vmin,190px);
-  transform:translate(-50%,-50%);left:50%;top:50%;margin:0;pointer-events:none;
-  transition:transform .18s cubic-bezier(.2,.9,.3,1),opacity .18s}
-#ret svg{width:100%;height:100%;overflow:visible;
-  filter:drop-shadow(0 1px 3px rgba(0,0,0,.75))}
-#ret .tube{fill:none;stroke:rgba(0,0,0,.34);stroke-width:9}
-#ret .ring{fill:none;stroke:rgba(233,239,250,.42);stroke-width:1.2}
-#ret .ring.thin{stroke:rgba(233,239,250,.22);stroke-width:.8}
-#ret .hair path{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;opacity:.9}
-#ret .hair .fine{stroke-width:1;opacity:.55}
-#ret .mil circle{fill:rgba(233,239,250,.65)}
-#ret .ticks path{fill:none;stroke:rgba(233,239,250,.5);stroke-width:2.4;stroke-linecap:round}
+#ret{position:absolute;left:50%;top:50%;width:clamp(58px,15vmin,86px);height:clamp(58px,15vmin,86px);
+  transform:translate(-50%,-50%);margin:0;pointer-events:none;
+  transition:transform .13s cubic-bezier(.2,.9,.3,1)}
+#ret svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 2px rgba(0,0,0,.85))}
+#ret .hair path{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round}
+#ret .brk path{fill:none;stroke:transparent;stroke-width:2.2;stroke-linecap:round;
+  transition:stroke .12s;stroke-linejoin:round}
 #ret .dot{fill:var(--mint)}
-#ret.lock{transform:translate(-50%,-50%) scale(.9)}
+#ret.lock{transform:translate(-50%,-50%) scale(.84)}
 #ret.lock .hair path{stroke:var(--coral)}
-#ret.lock .ring{stroke:rgba(255,107,87,.55)}
-#ret.lock .mil circle{fill:rgba(255,107,87,.8)}
+#ret.lock .brk path{stroke:var(--coral)}
 #ret.lock .dot{fill:var(--coral)}
+#ret.fire{transform:translate(-50%,-50%) scale(1.16)}
 #ret.fire .dot{fill:#fff}
-#lockName{position:absolute;left:50%;top:calc(50% + clamp(80px,24vmin,110px));transform:translateX(-50%);
+#lockName{position:absolute;left:50%;top:calc(50% + clamp(42px,10vmin,58px));transform:translateX(-50%);
   font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.14em;color:var(--coral);
   text-transform:uppercase;opacity:0;transition:opacity .14s;white-space:nowrap;text-shadow:0 2px 8px #000}
 #ret.lock ~ #lockName{opacity:1}
@@ -377,24 +372,14 @@ input:focus{border-color:var(--peri);outline:none}
   <canvas id="silo"></canvas>
   <div id="fx"></div>
   <div id="ret">
-    <svg viewBox="0 0 140 140">
-      <circle class="tube" cx="70" cy="70" r="66"/>
-      <circle class="ring" cx="70" cy="70" r="52"/>
-      <circle class="ring thin" cx="70" cy="70" r="30"/>
+    <svg viewBox="0 0 80 80">
       <g class="hair">
-        <path d="M70 4v34M70 136v-34M4 70h34M136 70h-34"/>
-        <path class="fine" d="M70 44v14M70 96v-14M44 70h14M96 70h-14"/>
+        <path d="M40 6v16M40 74v-16M6 40h16M74 40h-16"/>
       </g>
-      <g class="mil">
-        <circle cx="70" cy="46" r="1.7"/><circle cx="70" cy="94" r="1.7"/>
-        <circle cx="46" cy="70" r="1.7"/><circle cx="94" cy="70" r="1.7"/>
-        <circle cx="70" cy="34" r="1.4"/><circle cx="70" cy="106" r="1.4"/>
-        <circle cx="34" cy="70" r="1.4"/><circle cx="106" cy="70" r="1.4"/>
+      <g class="brk">
+        <path d="M18 12h-6v6M62 12h6v6M18 68h-6v-6M62 68h6v-6"/>
       </g>
-      <g class="ticks">
-        <path d="M70 18v7M70 122v-7M18 70h7M122 70h-7"/>
-      </g>
-      <circle class="dot" cx="70" cy="70" r="2.6"/>
+      <circle class="dot" cx="40" cy="40" r="1.9"/>
     </svg>
   </div>
   <div id="lockName">—</div>
@@ -456,7 +441,7 @@ input:focus{border-color:var(--peri);outline:none}
   <div class="scroll"><div class="wrap">
     <div class="hero">
       <span class="kicker"><i></i><span data-i18n="kicker">Laser tag lewat kamera</span></span>
-      <h1>Tanda<em>Arena</em></h1>
+      <h1>AR<em>Shooter</em></h1>
       <p class="lede" data-i18n="lede">…</p>
     </div>
 
@@ -932,7 +917,7 @@ function handle(d){
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
       if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?T('bHead'):T('bTag'),'+1');
-        addImpact(innerWidth/2, innerHeight/2, myColor()); }
+        addImpact(innerWidth/2, innerHeight/2, myColor(), S.lock && S.lock.fig); }
       feed(T(d.head?'feedHead':'feedTag', `<b>${by?by.name:'?'}</b>`, `<b>${to?to.name:'?'}</b>`));
       paintScore();
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
@@ -1232,6 +1217,8 @@ function paintDiag(){
     L.push(AI.ready ? `${AI.ms}ms/pass (${AI.gpu?'GPU':'CPU'}) · ${AI.figs.length} figur · ${AI.figs.filter(f=>f.mask).length} siluet`
                     : ('model belum siap '+(AI.err?'· '+AI.err.slice(0,44):'')));
     if(AI.ready && AI.err) L.push('err: '+AI.err.slice(0,44));
+    const rng=AI.figs.filter(f=>f.dist).map(f=>(f.p?f.p.name:'?')+' '+f.dist.toFixed(1)+'m').join(' · ');
+    if(rng) L.push('jarak: '+rng);
     const src=AI.figs.filter(f=>f.head).map(f=>f.head.src).join(',');
     if(src) L.push('sumber kepala: '+src);
     L.push('tap chip = sampel baju orang di crosshair');
@@ -1396,8 +1383,12 @@ async function runDetect(){
           mask={ w:m.width, h:m.height, a:arr, float:!m.getAsUint8Array };
         }catch(e){}
       }
-      next.push({ p:tr.p, tr, mask, head, L,
-                  nb:{x:bx0/DW, y:by0/DH, w:(bx1-bx0)/DW, h:(by1-by0)/DH} });
+      const nb={x:bx0/DW, y:by0/DH, w:(bx1-bx0)/DW, h:(by1-by0)/DH};
+      // crude range: a 1.7 m person filling the frame height sits ~1.6 m away.
+      // Only valid when most of the body is visible, hence the coverage check.
+      const full = (P(27)&&P(27).s>0.3) || (P(28)&&P(28).s>0.3);
+      const dist = full ? Math.max(0.6, Math.min(25, 1.63/Math.max(0.02, nb.h))) : null;
+      next.push({ p:tr.p, tr, mask, head, L, nb, dist });
     });
 
     // faces sharpen the head, or stand alone when no pose was found
@@ -1415,6 +1406,7 @@ async function runDetect(){
 
     masks.forEach(m=>{ try{ m.close(); }catch(e){} });
     tracks = tracks.filter(t=>t.used).map(t=>({...t, used:false}));
+    next.sort((a,b)=>(b.dist||99)-(a.dist||99));   // far to near
     AI.figs=next; AI.t=now(); AI.ms=Math.round(now()-t0);
   }catch(e){ AI.err=(e && e.message ? e.message : String(e)).slice(0,120); }
   AI.busy=false;
@@ -1432,6 +1424,7 @@ function sizeSilo(){
   }
   octx.setTransform(dpr,0,0,dpr,0,0);
 }
+function rangeTag(fg){ return fg && fg.dist ? `  ${fg.dist.toFixed(1)} m` : ''; }
 function colorOf(p){
   if(!p) return '#FF6B57';
   const c=S.cal[p.band];
@@ -1463,15 +1456,18 @@ function addTracer(x,y,col,hit){
   S.fx.push({ k:'beam', t:now(), col, hit, x, y,
               ox:innerWidth/2 + (Math.random()*4-2)*u*0.3, oy:innerHeight + u*3 });
   S.fx.push({ k:'mz', t:now(), col, x:innerWidth/2, y:innerHeight - u*1.5 });
-  if(hit) addImpact(x, y, col);
+  if(hit) addImpact(x, y, col, S.lock && S.lock.fig);
 }
-function addImpact(x,y,col){
+const fxcv=document.createElement('canvas'), fxc=fxcv.getContext('2d');
+function addImpact(x,y,col,fig){
   const u=fxUnit(), parts=[];
   for(let i=0;i<7;i++){
     const a=Math.random()*6.283, v=(0.6+Math.random()*1.3)*u;
     parts.push({vx:Math.cos(a)*v, vy:Math.sin(a)*v, len:0.7+Math.random()});
   }
-  S.fx.push({ k:'imp', t:now(), col, x, y, parts });
+  // hold on to the silhouette so the flare can be masked to the body: light
+  // landing on a person should not spill over the wall behind them
+  S.fx.push({ k:'imp', t:now(), col, x, y, parts, silo: fig && fig.fill ? fig.fill : null });
 }
 function bloom(x,y,r,col,alpha){
   const g=octx.createRadialGradient(x,y,0,x,y,r);
@@ -1481,7 +1477,7 @@ function bloom(x,y,r,col,alpha){
   octx.globalAlpha=alpha; octx.fillStyle=g;
   octx.fillRect(x-r, y-r, r*2, r*2);
 }
-function drawFX(){
+function drawFX(pass){
   const t=now(), u=fxUnit();
   octx.save();
   octx.globalCompositeOperation='lighter';
@@ -1489,6 +1485,8 @@ function drawFX(){
   for(let i=S.fx.length-1;i>=0;i--){
     const f=S.fx[i], age=t-f.t;
 
+    if(pass==='imp' && f.k!=='imp') continue;
+    if(pass==='beam' && f.k==='imp') continue;
     if(f.k==='mz'){
       const life=110; if(age>life){ S.fx.splice(i,1); continue; }
       const k=1-age/life;
@@ -1519,7 +1517,26 @@ function drawFX(){
     const life=420; if(age>life){ S.fx.splice(i,1); continue; }
     const k=age/life, e=1-Math.pow(1-k,3), fade=Math.pow(1-k,1.4);
 
-    bloom(f.x, f.y, u*(6+7*e), f.col, fade*.95);          // the soft flare
+    if(f.silo){
+      // masked core: drawn in mask space, clipped by the silhouette, then scaled up
+      const mw=f.silo.width, mh=f.silo.height;
+      if(fxcv.width!==mw||fxcv.height!==mh){ fxcv.width=mw; fxcv.height=mh; }
+      const [sx0,sy0]=videoToScreen(0,0), [sx1,sy1]=videoToScreen(1,1);
+      const kx=mw/(sx1-sx0), ky=mh/(sy1-sy0);
+      const mx=(f.x-sx0)*kx, my=(f.y-sy0)*ky, mr=u*(6+7*e)*kx;
+      fxc.clearRect(0,0,mw,mh);
+      const g2=fxc.createRadialGradient(mx,my,0,mx,my,Math.max(1,mr));
+      g2.addColorStop(0,'rgba(255,255,255,.98)'); g2.addColorStop(.32,f.col); g2.addColorStop(1,'transparent');
+      fxc.globalCompositeOperation='source-over'; fxc.fillStyle=g2;
+      fxc.fillRect(mx-mr,my-mr,mr*2,mr*2);
+      fxc.globalCompositeOperation='destination-in';
+      fxc.drawImage(f.silo,0,0);
+      fxc.globalCompositeOperation='source-over';
+      octx.globalAlpha=fade; octx.drawImage(fxcv, sx0,sy0, sx1-sx0, sy1-sy0);
+      bloom(f.x, f.y, u*(5+6*e), f.col, fade*.30);        // a little spill for glow
+    } else {
+      bloom(f.x, f.y, u*(6+7*e), f.col, fade*.95);        // the soft flare
+    }
     octx.strokeStyle=f.col;
     octx.globalAlpha=fade*.7; octx.lineWidth=u*0.45*fade+0.5;
     octx.beginPath(); octx.arc(f.x, f.y, u*2+u*13*e, 0, 7); octx.stroke();
@@ -1537,8 +1554,9 @@ function drawFX(){
 function drawOverlay(){
   sizeSilo();
   octx.clearRect(0,0,innerWidth,innerHeight);
+  drawFX('beam');                                    // behind the people
   if(S.mode==='body' && S.overlay!=='off') drawFigures();
-  drawFX();
+  drawFX('imp');                                     // on top of them
 }
 function drawFigures(){
   const stale = now()-AI.t > 900;
@@ -1690,14 +1708,15 @@ function acquire(){
       const hb=fg.head.nb, hcx=hb.x+hb.w/2, hcy=hb.y+hb.h/2;
       const dx=(nx-hcx)/(hb.w/2), dy=(ny-hcy)/(hb.h/2);
       if(dx*dx+dy*dy <= 1.15)
-        return {id:fg.p.id, name:fg.p.name+(fg.head.src==='est'?' · KEPALA?':' · KEPALA'), head:true};
+        return {id:fg.p.id, head:true, fig:fg,
+                name:fg.p.name+(fg.head.src==='est'?' · HEAD?':' · HEAD')+rangeTag(fg)};
     }
     // body: pixel-exact against the segmentation mask, with the pose box as fallback
     for(const fg of AI.figs){
       if(!fg.p || fg.faceOnly || !targetable(fg.p)) continue;
       const inMask = fg.mask ? maskAt(fg, nx, ny)
         : (nx>fg.nb.x && nx<fg.nb.x+fg.nb.w && ny>fg.nb.y && ny<fg.nb.y+fg.nb.h);
-      if(inMask) return {id:fg.p.id, name:fg.p.name};
+      if(inMask) return {id:fg.p.id, name:fg.p.name+rangeTag(fg), fig:fg};
     }
     return null;
   }
