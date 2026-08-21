@@ -290,6 +290,41 @@ input:focus{border-color:var(--peri);outline:none}
 .reloading .round{animation:feedin .5s ease}
 @keyframes feedin{from{opacity:.1;transform:translateY(4px)}}
 
+/* scope ring around the crosshair */
+#scope{position:absolute;left:50%;top:50%;width:min(84vw,62vmin);height:min(84vw,62vmin);
+  transform:translate(-50%,-50%);pointer-events:none;opacity:.5;transition:opacity .2s,transform .2s}
+#scope svg{width:100%;height:100%;overflow:visible}
+#scope .sr{fill:none;stroke:rgba(233,239,250,.55);stroke-width:1.4}
+#scope .sr.thin{stroke:rgba(63,224,255,.28);stroke-width:.8}
+#scope .ticks line{stroke:rgba(233,239,250,.5);stroke-width:1.6}
+#scope .ticks line.maj{stroke:var(--yl);stroke-width:2.6}
+#scope .wing{stroke:rgba(63,224,255,.35);stroke-width:1.2;fill:none}
+#scope .cap{stroke:var(--yl);stroke-width:2.4;fill:none;stroke-linecap:round}
+#scope.lock{opacity:.95;transform:translate(-50%,-50%) scale(.96)}
+#scope.lock .sr{stroke:rgba(255,46,99,.75)}
+#scope.lock .cap{stroke:var(--mg)}
+
+/* top row: minimap · score · feed */
+.topbar{display:flex;align-items:flex-start;gap:10px}
+.tscore{margin:0 auto}
+.feedbox{max-width:38%;background:rgba(6,12,20,.55);border:1px solid rgba(63,224,255,.34);
+  padding:7px 10px;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  min-height:26px}
+#feed{font-family:'Martian Mono',monospace;font-size:.54rem;line-height:1.9;color:var(--dim);
+  letter-spacing:.05em;text-align:right}
+#feed b{color:var(--cy)}
+#radar{width:clamp(66px,17vw,92px);height:clamp(66px,17vw,92px);flex:none;border-radius:50%;
+  border:1px solid rgba(63,224,255,.4);background:rgba(6,12,20,.6);box-shadow:0 0 18px -8px var(--cy)}
+.mid{flex:1;min-height:0}
+
+/* weapon selector, always on screen */
+.wsel{display:flex;gap:5px;justify-content:flex-end;margin-bottom:6px}
+.wchip{font-family:'Martian Mono',monospace;font-size:.5rem;letter-spacing:.12em;padding:5px 9px;
+  border:1px solid rgba(63,224,255,.3);color:var(--dim);background:rgba(6,12,20,.6);
+  transition:all .15s}
+.wchip[aria-pressed="true"]{border-color:var(--yl);color:var(--yl);
+  background:rgba(255,212,0,.1);box-shadow:0 0 14px -6px var(--yl)}
+
 /* ---------- hitmarker ---------- */
 .hitmark{position:absolute;left:50%;top:50%;width:clamp(38px,10vmin,54px);height:clamp(38px,10vmin,54px);
   transform:translate(-50%,-50%) rotate(0deg);pointer-events:none;opacity:0}
@@ -413,6 +448,13 @@ input:focus{border-color:var(--peri);outline:none}
       <circle class="dot" cx="40" cy="40" r="1.9"/>
     </svg>
   </div>
+  <div id="scope"><svg viewBox="0 0 400 400">
+    <circle class="sr" cx="200" cy="200" r="150"/>
+    <circle class="sr thin" cx="200" cy="200" r="163"/>
+    <g class="ticks" id="scopeTicks"></g>
+    <path class="wing" d="M36 200h96M368 200h-96"/>
+    <path class="cap" d="M132 186v28M268 186v28"/>
+  </svg></div>
   <div id="lockName">—</div>
   <div id="muzzle"></div>
   <div id="flash"></div>
@@ -423,15 +465,14 @@ input:focus{border-color:var(--peri);outline:none}
 
   <div class="hud">
     <div class="topbar">
+      <canvas id="radar" width="208" height="208" hidden></canvas>
       <div class="tscore" id="score"></div>
+      <div class="feedbox"><div id="feed"></div></div>
     </div>
 
     <div class="plates" id="plates"></div>
 
-    <div class="mid">
-      <div id="feed"></div>
-      <canvas id="radar" width="208" height="208" hidden></canvas>
-    </div>
+    <div class="mid"></div>
 
     <div class="firehint" id="fireHint" data-i18n="fireHint">Tap anywhere to fire</div>
     <div class="preroll hbox" id="preroll" hidden>
@@ -469,7 +510,11 @@ input:focus{border-color:var(--peri);outline:none}
 
       <div class="corner right">
         <div class="wpn">
-          <div class="wrow"><span class="tag" id="wpName">AR-77</span><span class="mode" id="wpMode">AUTO</span></div>
+          <div class="wsel">
+          <button class="wchip" data-w="rifle" aria-pressed="true">AR-77</button>
+          <button class="wchip" data-w="pistol" aria-pressed="false">SD-9</button>
+        </div>
+        <div class="wrow"><span class="tag" id="wpName">AR-77</span><span class="mode" id="wpMode">AUTO</span></div>
           <div class="vrow"><b class="big" id="ammo">30</b><span class="unit" id="magMax">/30</span></div>
           <div class="mag" id="mag"></div>
         </div>
@@ -594,6 +639,11 @@ input:focus{border-color:var(--peri);outline:none}
    Three hit-detection modes: band (color tracking), field (GPS+compass), solo.
 ================================================================ */
 const $ = s => document.querySelector(s);
+/* innerHeight counts the area behind Safari's toolbars, but #ar is 100svh.
+   Mixing the two put every drawn thing a few percent off — beams ended above
+   the crosshair. All screen maths goes through these instead. */
+const VW = () => { const e=document.getElementById('ar'); return (e&&e.clientWidth) || innerWidth; };
+const VH = () => { const e=document.getElementById('ar'); return (e&&e.clientHeight) || innerHeight; };
 const $$ = s => [...document.querySelectorAll(s)];
 
 const BANDS = [
@@ -972,7 +1022,7 @@ function handle(d){
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
       if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); hitMark(true); banner(d.head?T('bHead'):T('bTag'),'+1');
-        addImpact(innerWidth/2, innerHeight/2, BEAM.mid, S.lock && S.lock.fig); }
+        addImpact(VW()/2, VH()/2, BEAM.mid, S.lock && S.lock.fig); }
       feed(T(d.head?'feedHead':'feedTag', `<b>${by?by.name:'?'}</b>`, `<b>${to?to.name:'?'}</b>`));
       paintScore();
       if(S.isHost && by && by.kills>=CFG.winKills) net.send({t:'end'}), endRound();
@@ -1063,7 +1113,7 @@ function stopAR(){
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   if(wake){ try{wake.release();}catch(e){} wake=null; }
   $('#ar').classList.remove('on');
-  try{ octx.clearRect(0,0,innerWidth,innerHeight); }catch(e){}
+  try{ octx.clearRect(0,0,VW(),VH()); }catch(e){}
   AI.figs=[]; tracks=[];
   S.marks.forEach(m=>m.remove()); S.marks.clear();
   if(S.drone){ S.drone.el.remove(); S.drone=null; }
@@ -1118,7 +1168,7 @@ function rgb2hs(r,g,b){
   return [(h+360)%360, mx?d/mx:0, mx];
 }
 function videoToScreen(nx,ny){
-  const v=$('#cam'), sw=innerWidth, sh=innerHeight;
+  const v=$('#cam'), sw=VW(), sh=VH();
   const vw=v.videoWidth||1280, vh=v.videoHeight||720;
   const k=Math.max(sw/vw, sh/vh);
   return [ (sw-vw*k)/2 + nx*vw*k, (sh-vh*k)/2 + ny*vh*k ];
@@ -1221,7 +1271,7 @@ const pctx=samp.getContext('2d',{willReadFrequently:true});
 function sampleColor(bandKey, label){
   const v=$('#cam'); if(!v.videoWidth) return;
   if(S.mode==='body'){
-    const cx=innerWidth/2, cy=innerHeight/2;
+    const cx=VW()/2, cy=VH()/2;
     const [nx,ny]=screenToVideo(cx,cy);
     const b=AI.figs.find(f=>!f.faceOnly && (f.mask ? maskAt(f,nx,ny)
       : (nx>f.nb.x&&nx<f.nb.x+f.nb.w&&ny>f.nb.y&&ny<f.nb.y+f.nb.h)));
@@ -1381,7 +1431,7 @@ function matchPlayer(c, tol=42){
 }
 function videoToScreenPt(nx,ny){ return videoToScreen(nx,ny); }
 function screenToVideo(x,y){
-  const v=$('#cam'), sw=innerWidth, sh=innerHeight;
+  const v=$('#cam'), sw=VW(), sh=VH();
   const vw=v.videoWidth||1280, vh=v.videoHeight||720, k=Math.max(sw/vw, sh/vh);
   return [ (x-(sw-vw*k)/2)/(vw*k), (y-(sh-vh*k)/2)/(vh*k) ];
 }
@@ -1499,9 +1549,10 @@ async function runDetect(){
 const LIMBS=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
 function sizeSilo(){
   const dpr=Math.min(2, devicePixelRatio||1);
-  if(silo.width!==Math.round(innerWidth*dpr) || silo.height!==Math.round(innerHeight*dpr)){
-    silo.width=Math.round(innerWidth*dpr); silo.height=Math.round(innerHeight*dpr);
-    silo.style.width=innerWidth+'px'; silo.style.height=innerHeight+'px';
+  const w=VW(), h=VH();
+  if(silo.width!==Math.round(w*dpr) || silo.height!==Math.round(h*dpr)){
+    silo.width=Math.round(w*dpr); silo.height=Math.round(h*dpr);
+    silo.style.width=w+'px'; silo.style.height=h+'px';
   }
   octx.setTransform(dpr,0,0,dpr,0,0);
 }
@@ -1527,7 +1578,7 @@ function cycleView(){
    with the shooter's own mark colour. Everything is drawn with additive
    blending and sized in viewport units, so it reads the same on a small phone
    and on a tablet. */
-function fxUnit(){ return Math.min(innerWidth, innerHeight)/100; }
+function fxUnit(){ return Math.min(VW(), VH())/100; }
 
 /* Sampled straight off the reference clip: the core reads rgb(255,240,155) —
    white-hot centre, amber halo — so the beam is gold regardless of team colour. */
@@ -1536,9 +1587,9 @@ function addTracer(x,y,col,hit){
   const u=fxUnit();
   const bolt={ k:'beam', t:now(), col:BEAM.glow, hit, x, y,
                fig: hit && S.lock ? S.lock.fig : null,
-               ox:innerWidth/2 + (Math.random()*4-2)*u*0.3, oy:innerHeight + u*3 };
+               ox:VW()/2 + (Math.random()*4-2)*u*0.3, oy:VH() + u*3 };
   S.fx.push(bolt);
-  S.fx.push({ k:'mz', t:now(), col:BEAM.mid, x:innerWidth/2, y:innerHeight - u*1.5 });
+  S.fx.push({ k:'mz', t:now(), col:BEAM.mid, x:VW()/2, y:VH() - u*1.5 });
   return bolt;
 }
 const fxcv=document.createElement('canvas'), fxc=fxcv.getContext('2d');
@@ -1636,7 +1687,7 @@ function drawFX(pass){
 }
 function drawOverlay(){
   sizeSilo();
-  octx.clearRect(0,0,innerWidth,innerHeight);
+  octx.clearRect(0,0,VW(),VH());
   drawFX('beam');                                    // behind the people
   if(S.mode==='body' && S.overlay!=='off') drawFigures();
   drawFX('imp');                                     // on top of them
@@ -1717,7 +1768,7 @@ function drawFigures(){
                                             : fg.p.name + '  · AMAN') : 'ORANG ?';
     octx.font='600 12px "Martian Mono", monospace';
     const tw=octx.measureText(label).width;
-    const lx=Math.max(6, Math.min(innerWidth-tw-18, x0)), ly=Math.max(20, y0-10);
+    const lx=Math.max(6, Math.min(VW()-tw-18, x0)), ly=Math.max(20, y0-10);
     octx.fillStyle='rgba(11,14,20,.86)';
     octx.beginPath(); octx.roundRect(lx-6, ly-14, tw+12, 20, 8); octx.fill();
     octx.fillStyle=fg.p?col:'rgba(233,239,250,.7)';
@@ -1828,7 +1879,7 @@ function fire(){
   r.style.transform=`translate(-50%,calc(-50% + ${(fxUnit()*0.45).toFixed(1)}px)) scale(${S.lock?0.9:0.98})`;
   setTimeout(()=>{ r.classList.remove('fire'); r.style.transform=''; }, 90);
   const sp=fxUnit()*W().spread*(S.lock?0.35:1);
-  addTracer(innerWidth/2 + (Math.random()*2-1)*sp, innerHeight/2 + (Math.random()*2-1)*sp,
+  addTracer(VW()/2 + (Math.random()*2-1)*sp, VH()/2 + (Math.random()*2-1)*sp,
             myColor(), !!S.lock);
 
   const t=S.lock;
@@ -1847,7 +1898,7 @@ function takeHit(byId, dmg, head){
   const col=colorOf(S.players.get(byId));
   $('#flash').style.background=`radial-gradient(120% 90% at 50% 50%, transparent 34%, ${col} 100%)`;
   const u=fxUnit();
-  addImpact(innerWidth/2 + (Math.random()*2-1)*u*18, innerHeight/2 + (Math.random()*2-1)*u*12, col);
+  addImpact(VW()/2 + (Math.random()*2-1)*u*18, VH()/2 + (Math.random()*2-1)*u*12, col);
   S.me.hp -= Math.max(1, Math.min(70, dmg || CFG.dmg)); paintHP();
   if(head) banner(T('bHead'),'−'+(dmg||CFG.headDmg));
   SFX.hurt(); buzz([28,50,28]);
@@ -1915,6 +1966,7 @@ function loop(t){
     S.scanT=t;
     S.lock = S.me.alive ? acquire() : null;
     $('#ret').classList.toggle('lock', !!S.lock);
+    $('#scope').classList.toggle('lock', !!S.lock);
     $('#lockName').textContent = S.lock ? S.lock.name : '';
     if(S.mode==='body' && t-(AI.last||0)>110){ AI.last=t; runDetect(); }
     if(S.shieldUntil && now()>=S.shieldUntil){ S.shieldUntil=0; paintHP(); }
@@ -2084,6 +2136,18 @@ function endRound(){
   }
 })();
 
+(function scopeTicks(){
+  const g=$('#scopeTicks'); if(!g) return;
+  let out='';
+  for(let i=0;i<72;i++){
+    const a=i/72*Math.PI*2, maj=i%6===0;
+    const r0=150, r1=150-(maj?11:6);
+    out+=`<line class="${maj?'maj':''}" x1="${200+Math.cos(a)*r0}" y1="${200+Math.sin(a)*r0}"
+           x2="${200+Math.cos(a)*r1}" y2="${200+Math.sin(a)*r1}"/>`;
+  }
+  g.innerHTML=out;
+})();
+
 /* ---------------- input ---------------- */
 function trigDown(e){
   e.preventDefault();
@@ -2112,9 +2176,9 @@ function paintWeapon(){
   const b=$('#btnWeapon'); if(b) b.textContent=W().name;
   const n=$('#wpName'); if(n) n.textContent=W().name;
   const m=$('#wpMode'); if(m) m.textContent = W().auto ? T('wAuto') : T('wSingle');
-  $$('.wpick').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.w===S.weapon)));
+  $$('.wpick, .wchip').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.w===S.weapon)));
 }
-$$('.wpick').forEach(b=>b.addEventListener('click', ()=>{
+$$('.wpick, .wchip').forEach(b=>b.addEventListener('click', ()=>{
   S.weapon=b.dataset.w; S.ammo=W().mag; paintAmmo(); paintWeapon();
 }));
 $('#btnLangGame').onclick = ()=>{ LANG = LANG==='en'?'id':'en'; applyLang(); };
