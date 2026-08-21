@@ -164,19 +164,26 @@ input:focus{border-color:var(--peri);outline:none}
   background:radial-gradient(120% 88% at 50% 46%,transparent 46%,rgba(0,0,0,.55) 100%)}
 
 /* reticle */
-#ret{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;pointer-events:none;
-  transition:transform .18s cubic-bezier(.2,.9,.3,1)}
-#ret svg{width:100%;height:100%;overflow:visible}
-#ret .ring{fill:none;stroke:rgba(233,239,250,.5);stroke-width:1.5}
-#ret .brk{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linecap:round;
-  transition:stroke .16s,opacity .16s}
+#ret{position:absolute;left:50%;top:50%;width:clamp(132px,42vmin,190px);height:clamp(132px,42vmin,190px);
+  transform:translate(-50%,-50%);left:50%;top:50%;margin:0;pointer-events:none;
+  transition:transform .18s cubic-bezier(.2,.9,.3,1),opacity .18s}
+#ret svg{width:100%;height:100%;overflow:visible;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.75))}
+#ret .tube{fill:none;stroke:rgba(0,0,0,.34);stroke-width:9}
+#ret .ring{fill:none;stroke:rgba(233,239,250,.42);stroke-width:1.2}
+#ret .ring.thin{stroke:rgba(233,239,250,.22);stroke-width:.8}
+#ret .hair path{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round;opacity:.9}
+#ret .hair .fine{stroke-width:1;opacity:.55}
+#ret .mil circle{fill:rgba(233,239,250,.65)}
+#ret .ticks path{fill:none;stroke:rgba(233,239,250,.5);stroke-width:2.4;stroke-linecap:round}
 #ret .dot{fill:var(--mint)}
-#ret.lock{transform:scale(.86)}
-#ret.lock .brk{stroke:var(--coral)}
-#ret.lock .ring{stroke:rgba(255,107,87,.5)}
+#ret.lock{transform:translate(-50%,-50%) scale(.9)}
+#ret.lock .hair path{stroke:var(--coral)}
+#ret.lock .ring{stroke:rgba(255,107,87,.55)}
+#ret.lock .mil circle{fill:rgba(255,107,87,.8)}
 #ret.lock .dot{fill:var(--coral)}
 #ret.fire .dot{fill:#fff}
-#lockName{position:absolute;left:50%;top:calc(50% + 74px);transform:translateX(-50%);
+#lockName{position:absolute;left:50%;top:calc(50% + clamp(80px,24vmin,110px));transform:translateX(-50%);
   font-family:'Martian Mono',monospace;font-size:.68rem;letter-spacing:.14em;color:var(--coral);
   text-transform:uppercase;opacity:0;transition:opacity .14s;white-space:nowrap;text-shadow:0 2px 8px #000}
 #ret.lock ~ #lockName{opacity:1}
@@ -255,6 +262,10 @@ input:focus{border-color:var(--peri);outline:none}
 .trigger .track{fill:none;stroke:rgba(255,255,255,.13);stroke-width:5}
 .trigger .fill{fill:none;stroke:url(#gtrig);stroke-width:5;stroke-linecap:round;
   transition:stroke-dashoffset .22s cubic-bezier(.2,.9,.3,1)}
+.trigger.gauge{pointer-events:none}
+.firehint{position:absolute;left:50%;bottom:calc(var(--tw,110px) + 62px);transform:translateX(-50%);
+  font-family:'Martian Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);white-space:nowrap;pointer-events:none;transition:opacity .5s;text-shadow:0 1px 6px #000}
 .fire{position:absolute;inset:9px;border-radius:50%;display:grid;place-items:center;
   background:radial-gradient(120% 120% at 50% 18%,rgba(143,184,255,.32),rgba(11,14,20,.72));
   border:1px solid var(--edge-hi);box-shadow:var(--lift), inset 0 1px 0 rgba(255,255,255,.18);
@@ -366,10 +377,24 @@ input:focus{border-color:var(--peri);outline:none}
   <canvas id="silo"></canvas>
   <div id="fx"></div>
   <div id="ret">
-    <svg viewBox="0 0 120 120">
-      <circle class="ring" cx="60" cy="60" r="30"/>
-      <path class="brk" d="M12 34V16a4 4 0 0 1 4-4h18M86 12h18a4 4 0 0 1 4 4v18M108 86v18a4 4 0 0 1-4 4H86M34 108H16a4 4 0 0 1-4-4V86"/>
-      <circle class="dot" cx="60" cy="60" r="3.5"/>
+    <svg viewBox="0 0 140 140">
+      <circle class="tube" cx="70" cy="70" r="66"/>
+      <circle class="ring" cx="70" cy="70" r="52"/>
+      <circle class="ring thin" cx="70" cy="70" r="30"/>
+      <g class="hair">
+        <path d="M70 4v34M70 136v-34M4 70h34M136 70h-34"/>
+        <path class="fine" d="M70 44v14M70 96v-14M44 70h14M96 70h-14"/>
+      </g>
+      <g class="mil">
+        <circle cx="70" cy="46" r="1.7"/><circle cx="70" cy="94" r="1.7"/>
+        <circle cx="46" cy="70" r="1.7"/><circle cx="94" cy="70" r="1.7"/>
+        <circle cx="70" cy="34" r="1.4"/><circle cx="70" cy="106" r="1.4"/>
+        <circle cx="34" cy="70" r="1.4"/><circle cx="106" cy="70" r="1.4"/>
+      </g>
+      <g class="ticks">
+        <path d="M70 18v7M70 122v-7M18 70h7M122 70h-7"/>
+      </g>
+      <circle class="dot" cx="70" cy="70" r="2.6"/>
     </svg>
   </div>
   <div id="lockName">—</div>
@@ -391,6 +416,7 @@ input:focus{border-color:var(--peri);outline:none}
     </div>
     <div id="calbar" hidden></div>
     <div class="glass" id="diag" hidden></div>
+    <div class="firehint" id="fireHint" data-i18n="fireHint">Tap anywhere to fire</div>
     <div class="preroll glass" id="preroll" hidden>
       <b id="prerollTitle">Calibrate first</b>
       <p id="prerollHint">Aim at each opponent and tap their name.</p>
@@ -410,7 +436,7 @@ input:focus{border-color:var(--peri);outline:none}
         <button class="mini" id="btnLangGame">EN</button>
         <button class="mini" id="btnQuit">Keluar</button>
       </div>
-      <div class="trigger">
+      <div class="trigger gauge">
         <svg viewBox="0 0 100 100">
           <defs><linearGradient id="gtrig" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#7DF9D9"/><stop offset=".5" stop-color="#8FB8FF"/>
@@ -665,6 +691,7 @@ const I18N={
   calTitle:'Calibrate first', calHint:'Aim at each opponent and tap their name to sample the colour they are wearing.',
   calHintSolo:'Get ready.', ready:'Ready', startNow:'Start now', readyN:'{0}/{1} ready',
   stDone:'sampled', stTap:'tap to sample', stAim:'aim at them', stRemaining:'{0} left', skip:'Skip',
+  fireHint:'Tap anywhere to fire',
   waitReady:'Waiting for the others…', go:'GO',
   bTagged:'DOWN', bHead:'HEADSHOT', bTag:'TAG', bActive:'BACK IN', bShield:'immune {0}s',
   bStartBand:'aim at their tape', bStartBody:'aim at the person', bStartField:'face your opponent',
@@ -719,6 +746,7 @@ const I18N={
   calTitle:'Kalibrasi dulu', calHint:'Bidik tiap lawan, lalu tap namanya untuk menyampel warna yang dia pakai.',
   calHintSolo:'Bersiap.', ready:'Siap', startNow:'Mulai sekarang', readyN:'{0}/{1} siap',
   stDone:'tersampel', stTap:'tap untuk sampel', stAim:'bidik dulu', stRemaining:'sisa {0}', skip:'Lewati',
+  fireHint:'Tap di mana saja untuk menembak',
   waitReady:'Menunggu yang lain…', go:'MULAI',
   bTagged:'TUMBANG', bHead:'HEADSHOT', bTag:'TAG', bActive:'AKTIF', bShield:'kebal {0} dtk',
   bStartBand:'bidik pitanya', bStartBody:'bidik orangnya', bStartField:'hadapkan HP ke lawan',
@@ -756,6 +784,7 @@ function applyLang(){
   const dg=$('#btnDiag'); if(dg) dg.textContent=T('diag');
   const q=$('#btnQuit'); if(q) q.textContent=T('quit');
   const sk=$('#btnSkip'); if(sk) sk.textContent=T('skip');
+  const fh=$('#fireHint'); if(fh && !S.shotOnce) fh.textContent=T('fireHint');
   document.querySelectorAll('[data-val]').forEach(el=>{ el.textContent=T(el.dataset.val); });
   paintRoster(); paintLobbyMode(); paintPreroll();
 }
@@ -1425,87 +1454,80 @@ function cycleView(){
    blending and sized in viewport units, so it reads the same on a small phone
    and on a tablet. */
 function fxUnit(){ return Math.min(innerWidth, innerHeight)/100; }
+
+/* A sustained beam, not a projectile: the bolt spans muzzle-to-target for its
+   whole life, built from three stacked strokes — wide haze, coloured glow,
+   thin white core — so it blooms instead of looking like a drawn line. */
 function addTracer(x,y,col,hit){
   const u=fxUnit();
-  S.fx.push({ k:'shot', t:now(), col, hit, x, y,
-              ox:innerWidth/2 + (Math.random()*6-3)*u*0.4,
-              oy:innerHeight + u*4 });
-  S.fx.push({ k:'mz', t:now(), col, x:innerWidth/2, y:innerHeight - u*2 });
+  S.fx.push({ k:'beam', t:now(), col, hit, x, y,
+              ox:innerWidth/2 + (Math.random()*4-2)*u*0.3, oy:innerHeight + u*3 });
+  S.fx.push({ k:'mz', t:now(), col, x:innerWidth/2, y:innerHeight - u*1.5 });
+  if(hit) addImpact(x, y, col);
 }
 function addImpact(x,y,col){
   const u=fxUnit(), parts=[];
-  for(let i=0;i<12;i++){
-    const a=Math.random()*6.283, v=(0.5+Math.random()*1.6)*u;
-    parts.push({a, vx:Math.cos(a)*v, vy:Math.sin(a)*v, len:0.6+Math.random()*1.4});
+  for(let i=0;i<7;i++){
+    const a=Math.random()*6.283, v=(0.6+Math.random()*1.3)*u;
+    parts.push({vx:Math.cos(a)*v, vy:Math.sin(a)*v, len:0.7+Math.random()});
   }
   S.fx.push({ k:'imp', t:now(), col, x, y, parts });
+}
+function bloom(x,y,r,col,alpha){
+  const g=octx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,'rgba(255,255,255,.95)');
+  g.addColorStop(.30, col);
+  g.addColorStop(1,'transparent');
+  octx.globalAlpha=alpha; octx.fillStyle=g;
+  octx.fillRect(x-r, y-r, r*2, r*2);
 }
 function drawFX(){
   const t=now(), u=fxUnit();
   octx.save();
-  octx.globalCompositeOperation='lighter';   // energy bolts add light, not paint
+  octx.globalCompositeOperation='lighter';
+  octx.lineCap='round';
   for(let i=S.fx.length-1;i>=0;i--){
     const f=S.fx[i], age=t-f.t;
 
     if(f.k==='mz'){
-      const life=90; if(age>life){ S.fx.splice(i,1); continue; }
+      const life=110; if(age>life){ S.fx.splice(i,1); continue; }
       const k=1-age/life;
-      const g=octx.createRadialGradient(f.x,f.y,0,f.x,f.y,u*9*k);
-      g.addColorStop(0, f.col); g.addColorStop(1, 'transparent');
-      octx.globalAlpha=k*.55; octx.fillStyle=g;
-      octx.fillRect(f.x-u*9, f.y-u*9, u*18, u*18);
+      bloom(f.x, f.y, u*11*k, f.col, k*.6);
       continue;
     }
 
-    if(f.k==='shot'){
-      const travel=90, fade=210;
-      if(age>fade){ S.fx.splice(i,1); continue; }
-      const prog=Math.min(1, age/travel);
-      // head of the bolt travels; the tail stretches behind it
-      const hx=f.ox+(f.x-f.ox)*prog, hy=f.oy+(f.y-f.oy)*prog;
-      const tail=Math.max(0, prog-0.26);
-      const tx=f.ox+(f.x-f.ox)*tail, ty=f.oy+(f.y-f.oy)*tail;
-      const k=age<travel ? 1 : 1-(age-travel)/(fade-travel);
+    if(f.k==='beam'){
+      const life=190; if(age>life){ S.fx.splice(i,1); continue; }
+      const k=Math.pow(1-age/life, 1.6);
+      const g=octx.createLinearGradient(f.ox,f.oy,f.x,f.y);
+      g.addColorStop(0,'rgba(255,255,255,0)');
+      g.addColorStop(.14, f.col);
+      g.addColorStop(1, f.col);
 
-      octx.globalAlpha=k*.35; octx.strokeStyle=f.col;
-      octx.lineWidth=u*1.5; octx.lineCap='round';
-      octx.beginPath(); octx.moveTo(tx,ty); octx.lineTo(hx,hy); octx.stroke();
+      octx.globalAlpha=k*.20; octx.strokeStyle=g; octx.lineWidth=u*3.4;
+      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
 
-      octx.globalAlpha=k*.95; octx.strokeStyle='#fff'; octx.lineWidth=u*0.42;
-      octx.beginPath(); octx.moveTo(tx,ty); octx.lineTo(hx,hy); octx.stroke();
+      octx.globalAlpha=k*.55; octx.lineWidth=u*1.5;
+      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
 
-      if(age<travel){
-        const g=octx.createRadialGradient(hx,hy,0,hx,hy,u*3.4);
-        g.addColorStop(0,'#fff'); g.addColorStop(.4,f.col); g.addColorStop(1,'transparent');
-        octx.globalAlpha=.9; octx.fillStyle=g;
-        octx.fillRect(hx-u*3.4, hy-u*3.4, u*6.8, u*6.8);
-      }
-      if(f.hit && !f.popped && prog>=1){ f.popped=true; addImpact(f.x, f.y, f.col); }
+      octx.globalAlpha=k*.95; octx.strokeStyle='rgba(255,255,255,.95)'; octx.lineWidth=u*0.38;
+      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
       continue;
     }
 
-    // impact
     if(f.k!=='imp' || !f.parts){ S.fx.splice(i,1); continue; }
     const life=420; if(age>life){ S.fx.splice(i,1); continue; }
-    const k=age/life, e=1-Math.pow(1-k,3), fade=1-k;
+    const k=age/life, e=1-Math.pow(1-k,3), fade=Math.pow(1-k,1.4);
 
-    const g=octx.createRadialGradient(f.x,f.y,0,f.x,f.y,u*7*(1-k*.4));
-    g.addColorStop(0,'#fff'); g.addColorStop(.35,f.col); g.addColorStop(1,'transparent');
-    octx.globalAlpha=fade*.9; octx.fillStyle=g;
-    octx.fillRect(f.x-u*7, f.y-u*7, u*14, u*14);
-
-    octx.strokeStyle=f.col; octx.lineCap='round';
-    octx.globalAlpha=fade*.8; octx.lineWidth=u*0.5*fade+0.6;
-    octx.beginPath(); octx.arc(f.x, f.y, u*2 + u*10*e, 0, 7); octx.stroke();
-    octx.globalAlpha=fade*.35; octx.lineWidth=u*0.3;
-    octx.beginPath(); octx.arc(f.x, f.y, u*1 + u*16*e, 0, 7); octx.stroke();
-
-    octx.globalAlpha=fade; octx.lineWidth=u*0.36;
+    bloom(f.x, f.y, u*(6+7*e), f.col, fade*.95);          // the soft flare
+    octx.strokeStyle=f.col;
+    octx.globalAlpha=fade*.7; octx.lineWidth=u*0.45*fade+0.5;
+    octx.beginPath(); octx.arc(f.x, f.y, u*2+u*13*e, 0, 7); octx.stroke();
+    octx.globalAlpha=fade*.55; octx.lineWidth=u*0.3;
     octx.beginPath();
     for(const p of f.parts){
-      const d=e*u*13*p.len, gx=f.x+p.vx*e*7, gy=f.y+p.vy*e*7 + d*d*0.004;
-      octx.moveTo(f.x+p.vx*e*7*0.72, f.y+p.vy*e*7*0.72);
-      octx.lineTo(gx, gy);
+      octx.moveTo(f.x+p.vx*e*5, f.y+p.vy*e*5);
+      octx.lineTo(f.x+p.vx*e*9*p.len, f.y+p.vy*e*9*p.len + e*e*u*1.6);
     }
     octx.stroke();
   }
@@ -1697,10 +1719,11 @@ function fire(){
   if(now()-S.lastShot < CFG.fireMs) return;
   if(S.ammo<=0){ SFX.hurt(); reload(); return; }
   S.lastShot=now(); S.ammo--; paintAmmo();
+  if(!S.shotOnce){ S.shotOnce=true; const fh=$('#fireHint'); if(fh){ fh.style.opacity='0'; } }
   SFX.shot(); buzz(12);
   $('#muzzle').classList.remove('on'); void $('#muzzle').offsetWidth; $('#muzzle').classList.add('on');
   const r=$('#ret'); r.classList.add('fire');
-  r.style.transform=`translateY(${(fxUnit()*0.5).toFixed(1)}px) scale(${S.lock?0.86:0.97})`;
+  r.style.transform=`translate(-50%,calc(-50% + ${(fxUnit()*0.45).toFixed(1)}px)) scale(${S.lock?0.9:0.98})`;
   setTimeout(()=>{ r.classList.remove('fire'); r.style.transform=''; }, 90);
   const sp=fxUnit()*(S.lock?0.6:1.4);
   addTracer(innerWidth/2 + (Math.random()*2-1)*sp, innerHeight/2 + (Math.random()*2-1)*sp,
@@ -1876,6 +1899,7 @@ function beginCountdown(){
     if(n>0){ banner(String(n), '', false); tone(660,660,.08,'square',.14); n--; setTimeout(tick,700); }
     else{
       S.phase='live'; S.counting=false;
+      const fh2=$('#fireHint'); if(fh2 && !S.shotOnce) fh2.style.opacity='1';
       const sub={band:'bStartBand',body:'bStartBody',field:'bStartField',solo:'bStartSolo'}[S.mode];
       banner(T('go'), T(sub)); tone(880,1320,.22,'triangle',.18); paintCal();
     }
@@ -1911,7 +1935,8 @@ async function startRound(){
   if(S.mode==='field'){ try{ await startSensors(); }catch(e){ toast(T('tGpsDenied'), 6000); } }
   if(S.mode==='solo') spawnDrone();
   S.gpsWarned=false; S.roundT=performance.now(); S.blob={}; paintDiag();
-  S.ready=false; S.counting=false; S.fx.length=0;
+  S.ready=false; S.counting=false; S.fx.length=0; S.shotOnce=false;
+  const fh=$('#fireHint'); if(fh){ fh.style.opacity=''; fh.textContent=T('fireHint'); }
   [...S.players.values()].forEach(p=>{ p.rdy=false; });
   S.phase = (S.mode==='band'||S.mode==='body') && foesOf().length ? 'cal' : 'pre';
   paintPreroll(); paintCal();
@@ -1956,13 +1981,8 @@ function endRound(){
 /* ---------------- input ---------------- */
 function trigDown(e){ e.preventDefault(); S.trig=true; fire(); }
 function trigUp(){ S.trig=false; }
-$$('.fire').forEach(b=>{
-  b.addEventListener('pointerdown', trigDown);
-  b.addEventListener('pointerup', trigUp);
-  b.addEventListener('pointercancel', trigUp);
-  b.addEventListener('pointerleave', trigUp);
-});
 addEventListener('pointerup', trigUp);
+addEventListener('pointercancel', trigUp);
 $('#btnReload').onclick = reload;
 $('#btnView').onclick = cycleView;
 $('#btnReady').onclick = markReady;
@@ -1974,7 +1994,10 @@ $('#btnMenu').onclick = ()=>{
 $('#btnDiag').onclick = ()=>{ S.diag=!S.diag; paintDiag(); };
 $('#btnLangGame').onclick = ()=>{ LANG = LANG==='en'?'id':'en'; applyLang(); };
 $('#btnQuit').onclick = ()=>{ endRound(); };
-$('#ar').addEventListener('pointerdown', e=>{ if(e.target.closest('.hud')) return; trigDown(e); });
+$('#ar').addEventListener('pointerdown', e=>{
+  if(e.target.closest('button, input, #preroll, #calbar, #diag')) return;
+  trigDown(e);
+});
 addEventListener('keydown', e=>{ if(!S.started) return;
   if(e.code==='Space'){ e.preventDefault(); S.trig=true; fire(); } if(e.key==='r') reload(); });
 addEventListener('keyup', e=>{ if(e.code==='Space') S.trig=false; });
