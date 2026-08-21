@@ -155,7 +155,7 @@ input:focus{border-color:var(--peri);outline:none}
   -webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* ---------- AR layer ---------- */
-#ar{position:fixed;left:0;right:0;top:0;height:100svh;background:#000;z-index:5;display:none}
+#ar{position:fixed;left:0;right:0;top:0;height:var(--vh,100svh);background:#000;z-index:5;display:none}
 #ar.on{display:block}
 #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #scan{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
@@ -204,9 +204,18 @@ input:focus{border-color:var(--peri);outline:none}
 .bmark.unknown span{color:var(--dim)}
 
 /* ---------- HUD: sci-fi shooter, thin glowing frames ---------- */
-.hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;
-  padding:max(12px,env(safe-area-inset-top,0px)) var(--gap) calc(var(--gap) + var(--pad))}
-.hud > *{pointer-events:auto}
+.hud{position:absolute;inset:0;pointer-events:none;
+  --hpadX:clamp(10px,2.4vw,26px); --hpadY:clamp(10px,2.2vh,22px)}
+.anchor{position:absolute;pointer-events:auto;display:flex;flex-direction:column;gap:8px}
+.anchor.tl{top:calc(var(--hpadY) + env(safe-area-inset-top,0px));left:var(--hpadX);align-items:flex-start}
+.anchor.tc{top:calc(var(--hpadY) + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);align-items:center}
+.anchor.tr{top:calc(var(--hpadY) + env(safe-area-inset-top,0px));right:var(--hpadX);align-items:flex-end;max-width:36vw}
+.anchor.bl{bottom:calc(var(--hpadY) + var(--pad));left:var(--hpadX);align-items:flex-start}
+.anchor.br{bottom:calc(var(--hpadY) + var(--pad));right:var(--hpadX);align-items:flex-end}
+.anchor.bc{bottom:calc(var(--hpadY) + var(--pad));left:50%;transform:translateX(-50%);
+  align-items:center;width:min(430px,66vw);pointer-events:none}
+.anchor.bc > *{pointer-events:auto}
+.menurow{position:relative}
 .hbox{background:rgba(6,12,20,.62);border:1px solid rgba(63,224,255,.34);padding:9px 12px;
   clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
   box-shadow:0 0 18px -8px var(--cy), inset 0 0 22px -18px var(--cy)}
@@ -226,7 +235,7 @@ input:focus{border-color:var(--peri);outline:none}
 .orb small{display:block;font-size:.42rem;letter-spacing:.2em;color:var(--dim);font-weight:400}
 
 /* left nameplates */
-.plates{display:flex;flex-direction:column;gap:6px;margin-top:12px;align-items:flex-start}
+.plates{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
 .plate2{min-width:min(190px,44vw);background:rgba(6,12,20,.6);border:1px solid;padding:5px 10px 6px;
   clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)}
 .plate2 .n{font-family:'Martian Mono',monospace;font-size:.62rem;letter-spacing:.16em;font-weight:700}
@@ -258,8 +267,7 @@ input:focus{border-color:var(--peri);outline:none}
 #diag b{color:var(--ink);font-weight:400}
 
 /* bottom corners */
-.bot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:12px}
-.corner{position:relative;display:flex;align-items:flex-end;gap:10px}
+
 .vitals,.wpn{background:rgba(6,12,20,.6);border:1px solid rgba(63,224,255,.3);padding:7px 12px 9px;
   clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
   box-shadow:0 0 20px -10px var(--cy)}
@@ -291,8 +299,8 @@ input:focus{border-color:var(--peri);outline:none}
 @keyframes feedin{from{opacity:.1;transform:translateY(4px)}}
 
 /* scope ring around the crosshair */
-#scope{position:absolute;left:50%;top:50%;width:min(84vw,62vmin);height:min(84vw,62vmin);
-  transform:translate(-50%,-50%);pointer-events:none;opacity:.5;transition:opacity .2s,transform .2s}
+#scope{position:absolute;left:50%;top:50%;width:min(64vw,40vmin);height:min(64vw,40vmin);
+  transform:translate(-50%,-50%);pointer-events:none;opacity:.36;transition:opacity .2s,transform .2s}
 #scope svg{width:100%;height:100%;overflow:visible}
 #scope .sr{fill:none;stroke:rgba(233,239,250,.55);stroke-width:1.4}
 #scope .sr.thin{stroke:rgba(63,224,255,.28);stroke-width:.8}
@@ -305,9 +313,8 @@ input:focus{border-color:var(--peri);outline:none}
 #scope.lock .cap{stroke:var(--mg)}
 
 /* top row: minimap · score · feed */
-.topbar{display:flex;align-items:flex-start;gap:10px}
-.tscore{margin:0 auto}
-.feedbox{max-width:38%;background:rgba(6,12,20,.55);border:1px solid rgba(63,224,255,.34);
+.tscore{display:flex;align-items:center;gap:10px}
+.feedbox{max-width:100%;background:rgba(6,12,20,.55);border:1px solid rgba(63,224,255,.34);
   padding:7px 10px;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
   min-height:26px}
 #feed{font-family:'Martian Mono',monospace;font-size:.54rem;line-height:1.9;color:var(--dim);
@@ -315,7 +322,7 @@ input:focus{border-color:var(--peri);outline:none}
 #feed b{color:var(--cy)}
 #radar{width:clamp(66px,17vw,92px);height:clamp(66px,17vw,92px);flex:none;border-radius:50%;
   border:1px solid rgba(63,224,255,.4);background:rgba(6,12,20,.6);box-shadow:0 0 18px -8px var(--cy)}
-.mid{flex:1;min-height:0}
+
 
 /* weapon selector, always on screen */
 .wsel{display:flex;gap:5px;justify-content:flex-end;margin-bottom:6px}
@@ -338,15 +345,14 @@ input:focus{border-color:var(--peri);outline:none}
 
 /* drawer + preroll */
 .bot{position:relative;justify-content:center}
-.mini.icon{position:absolute;left:0;bottom:0;width:44px;height:44px;padding:0;
+.mini.icon{width:42px;height:42px;padding:0;
   display:grid;place-items:center;font-size:1rem;line-height:1;clip-path:none}
-.pills{position:absolute;left:0;bottom:54px;flex-direction:column;align-items:flex-start;
+.pills{position:absolute;left:0;bottom:52px;flex-direction:column;align-items:flex-start;
   gap:8px;z-index:3;animation:rise .22s cubic-bezier(.2,.9,.3,1)}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}}
 .trigger{margin:0 auto}
 .trigger.alt{display:none !important}
-.preroll{position:absolute;left:50%;bottom:calc(var(--pad) + 96px);transform:translateX(-50%);
-  width:min(420px,calc(100% - 24px));text-align:center;padding:16px 18px;z-index:4}
+.preroll{position:static;width:100%;text-align:center;padding:14px 16px}
 .preroll b{display:block;font-size:1.05rem;margin-bottom:6px}
 .preroll p{font-size:.8rem;color:var(--dim);line-height:1.5}
 #calList{display:flex;flex-direction:column;gap:7px;margin-top:12px}
@@ -399,6 +405,12 @@ input:focus{border-color:var(--peri);outline:none}
   .bot{gap:18px}
   .pills{flex-direction:row;align-items:center;margin:0 auto}
   #feed{font-size:.68rem}
+}
+@media (orientation:landscape) and (min-width:700px){
+  .hud{--hpadX:clamp(14px,2.6vw,34px);--hpadY:clamp(12px,2.6vh,26px)}
+  .anchor.tr{max-width:26vw}
+  .anchor.bc{width:min(420px,40vw)}
+  #scope{width:min(34vmin,300px);height:min(34vmin,300px)}
 }
 @media (max-height:520px){
   .trigger{--tw:clamp(58px,13vh,78px)}
@@ -464,42 +476,28 @@ input:focus{border-color:var(--peri);outline:none}
     <path d="M8 8l8 8M32 8l-8 8M8 32l8-8M32 32l-8-8"/></svg></div>
 
   <div class="hud">
-    <div class="topbar">
+    <!-- TOP LEFT: minimap + squad -->
+    <div class="anchor tl">
       <canvas id="radar" width="208" height="208" hidden></canvas>
-      <div class="tscore" id="score"></div>
-      <div class="feedbox"><div id="feed"></div></div>
+      <div class="plates" id="plates"></div>
     </div>
 
-    <div class="plates" id="plates"></div>
+    <!-- TOP CENTRE: objective -->
+    <div class="anchor tc"><div class="tscore" id="score"></div></div>
 
-    <div class="mid"></div>
+    <!-- TOP RIGHT: killfeed -->
+    <div class="anchor tr"><div class="feedbox"><div id="feed"></div></div></div>
 
-    <div class="firehint" id="fireHint" data-i18n="fireHint">Tap anywhere to fire</div>
-    <div class="preroll hbox" id="preroll" hidden>
-      <b id="prerollTitle">Calibrate first</b>
-      <p id="prerollHint">Aim at each opponent and tap their name.</p>
-      <div id="calList"></div>
-      <div class="prerow">
-        <span id="readyCount" class="mono"></span>
-        <button class="btn" id="btnReady" hidden>Ready</button>
-        <button class="mini" id="btnSkip" hidden>Skip</button>
+    <!-- BOTTOM LEFT: vitals -->
+    <div class="anchor bl">
+      <div class="vitals">
+        <div class="vtop"><span class="tag" id="meName">PLAYER</span><span id="protTag" hidden>IMMUNE</span></div>
+        <div class="vrow"><b class="big" id="hpTxt">100</b><span class="unit">HP</span></div>
+        <div class="hpbar"><i id="hpFill"></i></div>
       </div>
-    </div>
-
-    <div id="calbar" hidden></div>
-    <div class="hbox" id="diag" hidden></div>
-
-    <div class="bot">
-      <div class="corner left">
-        <div class="vitals">
-          <span class="tag" id="meName">PLAYER</span>
-          <span id="protTag" hidden>IMMUNE</span>
-          <div class="vrow"><b class="big" id="hpTxt">100</b><span class="unit">HP</span></div>
-          <div class="hpbar"><i id="hpFill"></i></div>
-        </div>
+      <div class="menurow">
         <button class="mini icon" id="btnMenu" aria-expanded="false">☰</button>
         <div class="pills" id="pills" hidden>
-          <button class="mini" id="btnWeapon">AR-77</button>
           <button class="mini" id="btnView">Overlay</button>
           <button class="mini" id="btnReload">Reload</button>
           <button class="mini" id="btnDiag">Diagnostics</button>
@@ -507,18 +505,36 @@ input:focus{border-color:var(--peri);outline:none}
           <button class="mini" id="btnQuit">Quit</button>
         </div>
       </div>
+    </div>
 
-      <div class="corner right">
-        <div class="wpn">
-          <div class="wsel">
-          <button class="wchip" data-w="rifle" aria-pressed="true">AR-77</button>
-          <button class="wchip" data-w="pistol" aria-pressed="false">SD-9</button>
-        </div>
+    <!-- BOTTOM RIGHT: weapon + ammo -->
+    <div class="anchor br">
+      <div class="wsel">
+        <button class="wchip" data-w="rifle" aria-pressed="true">AR-77</button>
+        <button class="wchip" data-w="pistol" aria-pressed="false">SD-9</button>
+      </div>
+      <div class="wpn">
         <div class="wrow"><span class="tag" id="wpName">AR-77</span><span class="mode" id="wpMode">AUTO</span></div>
-          <div class="vrow"><b class="big" id="ammo">30</b><span class="unit" id="magMax">/30</span></div>
-          <div class="mag" id="mag"></div>
+        <div class="vrow"><b class="big" id="ammo">30</b><span class="unit" id="magMax">/30</span></div>
+        <div class="mag" id="mag"></div>
+      </div>
+    </div>
+
+    <!-- CENTRE STACK -->
+    <div class="anchor bc">
+      <div class="firehint" id="fireHint" data-i18n="fireHint">Tap anywhere to fire</div>
+      <div class="preroll hbox" id="preroll" hidden>
+        <b id="prerollTitle">Calibrate first</b>
+        <p id="prerollHint">Aim at each opponent and tap their name.</p>
+        <div id="calList"></div>
+        <div class="prerow">
+          <span id="readyCount" class="mono"></span>
+          <button class="btn" id="btnReady" hidden>Ready</button>
+          <button class="mini" id="btnSkip" hidden>Skip</button>
         </div>
       </div>
+      <div id="calbar" hidden></div>
+      <div class="hbox" id="diag" hidden></div>
     </div>
   </div>
 </div>
@@ -881,6 +897,22 @@ function applyLang(){
 document.querySelectorAll('[data-lang-toggle]').forEach(b=>{
   b.onclick=()=>{ LANG = LANG==='en' ? 'id' : 'en'; applyLang(); };
 });
+
+/* Safari's toolbars change the visible box without changing innerHeight, which
+   is how the ammo panel ended up sliced off the bottom. Measure it for real. */
+function fitViewport(){
+  const vv=window.visualViewport;
+  const h=Math.round(vv ? vv.height : innerHeight);
+  document.documentElement.style.setProperty('--vh', h+'px');
+  if(typeof sizeSilo==='function' && S.started){ try{ sizeSilo(); }catch(e){} }
+}
+fitViewport();
+addEventListener('resize', fitViewport);
+addEventListener('orientationchange', ()=>setTimeout(fitViewport,300));
+if(window.visualViewport){
+  visualViewport.addEventListener('resize', fitViewport);
+  visualViewport.addEventListener('scroll', fitViewport);
+}
 
 /* ---------------- boot UI ---------------- */
 const MODE_NOTE_UNUSED = {
@@ -2167,20 +2199,17 @@ $('#btnMenu').onclick = ()=>{
   $('#btnMenu').setAttribute('aria-expanded', String(!p.hidden));
 };
 $('#btnDiag').onclick = ()=>{ S.diag=!S.diag; paintDiag(); };
-$('#btnWeapon').onclick = ()=>{
-  S.weapon = S.weapon==='rifle' ? 'pistol' : 'rifle';
+function swapWeapon(to){
+  S.weapon = to || (S.weapon==='rifle' ? 'pistol' : 'rifle');
   S.ammo=W().mag; S.reloading=false; S.burst=0;
   paintAmmo(); paintWeapon();
-};
+}
 function paintWeapon(){
-  const b=$('#btnWeapon'); if(b) b.textContent=W().name;
   const n=$('#wpName'); if(n) n.textContent=W().name;
   const m=$('#wpMode'); if(m) m.textContent = W().auto ? T('wAuto') : T('wSingle');
   $$('.wpick, .wchip').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.w===S.weapon)));
 }
-$$('.wpick, .wchip').forEach(b=>b.addEventListener('click', ()=>{
-  S.weapon=b.dataset.w; S.ammo=W().mag; paintAmmo(); paintWeapon();
-}));
+$$('.wpick, .wchip').forEach(b=>b.addEventListener('click', ()=> swapWeapon(b.dataset.w)));
 $('#btnLangGame').onclick = ()=>{ LANG = LANG==='en'?'id':'en'; applyLang(); };
 $('#btnQuit').onclick = ()=>{ endRound(); };
 $('#ar').addEventListener('pointerdown', e=>{
