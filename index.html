@@ -202,89 +202,98 @@ input:focus{border-color:var(--peri);outline:none}
 .bmark.unknown{border-color:rgba(233,239,250,.32)}
 .bmark.unknown span{color:var(--dim)}
 
-/* ---------- HUD ---------- */
+/* ---------- HUD: hard-edged, high contrast, shooter-style ---------- */
 .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;
   padding:max(14px,env(safe-area-inset-top,0px)) var(--gap) calc(var(--gap) + var(--pad))}
 .hud > *{pointer-events:auto}
-.glass{background:rgba(11,14,20,.62);border:1px solid var(--edge);border-radius:16px;
-  box-shadow:var(--lift);padding:10px 13px}
+.hbox{background:rgba(8,11,16,.66);border:1px solid rgba(233,239,250,.14);
+  padding:9px 12px;border-radius:3px;
+  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px));
+  box-shadow:0 6px 22px -14px #000}
 .top{display:flex;gap:10px;align-items:flex-start}
 .hp{flex:1;max-width:min(300px,48vw)}
 .hp .lbl{display:flex;justify-content:space-between;align-items:baseline;
-  font-family:'Martian Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--dim);margin-bottom:7px}
-.hp .lbl b{color:var(--ink);font-size:.8rem}
-.hpbar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
-.hpbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--mint),var(--ok));
-  transition:width .28s cubic-bezier(.2,.9,.3,1),background .28s}
-.hpbar i.low{background:linear-gradient(90deg,var(--coral),#FFA07A)}
-.hpbar i.prot{background:linear-gradient(90deg,var(--peri),var(--lilac));animation:shield 1s ease-in-out infinite}
-@keyframes shield{50%{opacity:.45}}
-#protTag{color:var(--lilac);letter-spacing:.16em;font-size:.58rem;
-  border:1px solid rgba(198,166,255,.5);border-radius:99px;padding:2px 7px;margin-left:8px}
-#score{margin-left:auto;font-family:'Martian Mono',monospace;font-size:.68rem;line-height:1.9;text-align:right}
-#score b{color:var(--ink)}
+  font-family:'Martian Mono',monospace;font-size:.58rem;letter-spacing:.16em;
+  color:var(--dim);margin-bottom:7px;text-transform:uppercase}
+.hp .lbl b{color:var(--ink);font-size:.95rem;font-weight:800}
+.hpbar{height:9px;background:rgba(255,255,255,.09);overflow:hidden;
+  -webkit-mask-image:repeating-linear-gradient(90deg,#000 0 7px,transparent 7px 9px);
+  mask-image:repeating-linear-gradient(90deg,#000 0 7px,transparent 7px 9px)}
+.hpbar i{display:block;height:100%;background:var(--mint);
+  transition:width .22s cubic-bezier(.2,.9,.3,1),background .22s}
+.hpbar i.low{background:var(--coral)}
+.hpbar i.prot{background:var(--lilac);animation:shield 1s ease-in-out infinite}
+@keyframes shield{50%{opacity:.4}}
+#protTag{color:var(--lilac);letter-spacing:.16em;font-size:.52rem;
+  border:1px solid rgba(198,166,255,.5);padding:1px 6px;margin-left:8px}
+#score{margin-left:auto;font-family:'Martian Mono',monospace;font-size:.62rem;
+  line-height:1.9;text-align:right;letter-spacing:.08em}
+#score b{color:var(--ink);font-weight:800}
 .mid{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;min-height:0}
-#feed{font-family:'Martian Mono',monospace;font-size:.62rem;line-height:1.8;color:var(--dim);
-  max-width:56%;text-shadow:0 1px 8px #000}
+#feed{font-family:'Martian Mono',monospace;font-size:.58rem;line-height:1.9;color:var(--dim);
+  max-width:58%;text-shadow:0 1px 8px #000;letter-spacing:.04em}
 #feed b{color:var(--ink)}
 #radar{width:clamp(74px,20vw,104px);height:clamp(74px,20vw,104px);flex:none;
-  border-radius:50%;border:1px solid var(--edge);background:rgba(11,14,20,.62);box-shadow:var(--lift)}
+  border:1px solid rgba(233,239,250,.14);background:rgba(8,11,16,.66)}
 
-#calbar{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+#calbar{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
 #calbar::-webkit-scrollbar{display:none}
 .cal{flex:none;display:flex;align-items:center;gap:7px;font-family:'Martian Mono',monospace;
-  font-size:.62rem;letter-spacing:.06em;padding:9px 12px;border-radius:99px;
-  background:rgba(11,14,20,.66);border:1px solid var(--edge);text-transform:uppercase}
-.cal i{width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
-.cal b{color:var(--ink)}
-.cal em{font-style:normal;color:var(--peri)}
-.cal.hot{border-color:var(--ok);box-shadow:0 0 18px -6px var(--ok)}
-#diag{font-family:'Martian Mono',monospace;font-size:.6rem;line-height:1.9;color:var(--dim);
-  white-space:pre;margin-top:8px;border-radius:14px}
+  font-size:.58rem;letter-spacing:.08em;padding:8px 11px;background:rgba(8,11,16,.7);
+  border:1px solid rgba(233,239,250,.14);text-transform:uppercase}
+.cal i{width:8px;height:8px;flex:none;box-shadow:0 0 10px currentColor}
+.cal b{color:var(--ink)} .cal em{font-style:normal;color:var(--peri)}
+.cal.hot{border-color:var(--ok)}
+#diag{font-family:'Martian Mono',monospace;font-size:.56rem;line-height:1.9;color:var(--dim);
+  white-space:pre;margin-top:8px}
 #diag b{color:var(--ink);font-weight:400}
 
-/* trigger cluster */
-.bot{display:flex;align-items:flex-end;gap:10px;margin-top:12px}
-.pills{display:flex;flex-direction:column;gap:8px}
-.mini{font-family:'Martian Mono',monospace;font-size:.62rem;letter-spacing:.08em;padding:11px 14px;
-  border-radius:99px;background:rgba(11,14,20,.62);border:1px solid var(--edge);
-  text-transform:uppercase;white-space:nowrap;transition:transform .12s}
-.mini:active{transform:scale(.95)}
-.trigger{position:relative;width:var(--tw);height:var(--tw);margin-left:auto;flex:none;
-  --tw:clamp(80px,23vw,108px)}
-.trigger.alt{display:none;margin:0 auto 0 0}
-.trigger svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
-.trigger .track{fill:none;stroke:rgba(255,255,255,.13);stroke-width:5}
-.trigger .fill{fill:none;stroke:url(#gtrig);stroke-width:5;stroke-linecap:round;
-  transition:stroke-dashoffset .22s cubic-bezier(.2,.9,.3,1)}
-.trigger.gauge{pointer-events:none}
-.firehint{position:absolute;left:50%;bottom:calc(var(--tw,110px) + 62px);transform:translateX(-50%);
-  font-family:'Martian Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--dim);white-space:nowrap;pointer-events:none;transition:opacity .5s;text-shadow:0 1px 6px #000}
-.fire{position:absolute;inset:9px;border-radius:50%;display:grid;place-items:center;
-  background:radial-gradient(120% 120% at 50% 18%,rgba(143,184,255,.32),rgba(11,14,20,.72));
-  border:1px solid var(--edge-hi);box-shadow:var(--lift), inset 0 1px 0 rgba(255,255,255,.18);
-  transition:transform .08s,background .08s}
-.fire:active{transform:scale(.93);background:radial-gradient(120% 120% at 50% 18%,rgba(143,184,255,.6),rgba(11,14,20,.8))}
-.ammoText{font-family:'Martian Mono',monospace;font-weight:800;font-size:clamp(1.1rem,4.6vw,1.5rem);line-height:1}
-.ammoText small{display:block;font-size:.52rem;font-weight:400;color:var(--dim);letter-spacing:.1em;margin-top:3px}
+/* ---------- magazine ---------- */
+.bot{display:flex;align-items:flex-end;margin-top:12px;position:relative}
+.magwrap{margin-left:auto;display:flex;align-items:flex-end;gap:9px}
+.mag{display:flex;flex-direction:column-reverse;gap:3px;padding:7px 6px;
+  background:rgba(8,11,16,.62);border:1px solid rgba(233,239,250,.16);
+  clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 0)}
+.round{width:clamp(7px,2vw,9px);height:clamp(11px,3vw,15px);background:rgba(233,239,250,.13);
+  border-radius:2px 2px 1px 1px;position:relative;transition:background .16s,box-shadow .16s,opacity .16s}
+.round::after{content:"";position:absolute;left:50%;top:-3px;transform:translateX(-50%);
+  width:60%;height:4px;border-radius:2px 2px 0 0;background:inherit}
+.round.live{background:var(--mint);box-shadow:0 0 9px -1px var(--mint)}
+.round.spent{opacity:.35}
+.magnum{font-family:'Martian Mono',monospace;line-height:.95;text-align:right;
+  text-shadow:0 2px 12px #000}
+.ammoText{font-size:clamp(1.7rem,7vw,2.4rem);font-weight:800;display:block}
 .ammoText.empty{color:var(--coral)}
+.magnum em{font-style:normal;font-size:.62rem;color:var(--dim);letter-spacing:.14em}
+.reloading .round{animation:feedin .5s ease}
+@keyframes feedin{from{opacity:.1;transform:translateY(5px)}}
+
+/* ---------- hitmarker ---------- */
+.hitmark{position:absolute;left:50%;top:50%;width:clamp(38px,10vmin,54px);height:clamp(38px,10vmin,54px);
+  transform:translate(-50%,-50%) rotate(0deg);pointer-events:none;opacity:0}
+.hitmark svg{width:100%;height:100%}
+.hitmark path{stroke:#fff;stroke-width:3;stroke-linecap:round;fill:none;
+  filter:drop-shadow(0 0 3px rgba(0,0,0,.9))}
+.hitmark.on{animation:hm .28s ease-out}
+.hitmark.kill path{stroke:var(--coral)}
+@keyframes hm{0%{opacity:1;transform:translate(-50%,-50%) scale(.7)}
+              100%{opacity:0;transform:translate(-50%,-50%) scale(1.25)}}
 
 /* drawer + preroll */
 .bot{position:relative;justify-content:center}
-.mini.icon{position:absolute;left:0;bottom:0;width:46px;height:46px;padding:0;
-  display:grid;place-items:center;font-size:1.05rem;line-height:1}
+.mini.icon{position:absolute;left:0;bottom:0;width:44px;height:44px;padding:0;
+  display:grid;place-items:center;font-size:1rem;line-height:1;clip-path:none}
 .pills{position:absolute;left:0;bottom:54px;flex-direction:column;align-items:flex-start;
   gap:8px;z-index:3;animation:rise .22s cubic-bezier(.2,.9,.3,1)}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}}
 .trigger{margin:0 auto}
 .trigger.alt{display:none !important}
-.preroll{position:absolute;left:50%;bottom:calc(var(--tw,110px) + 46px);transform:translateX(-50%);
-  width:min(420px,calc(100% - 24px));text-align:center;border-radius:20px;padding:16px 18px;z-index:4}
+.preroll{position:absolute;left:50%;bottom:calc(var(--pad) + 96px);transform:translateX(-50%);
+  width:min(420px,calc(100% - 24px));text-align:center;padding:16px 18px;z-index:4}
 .preroll b{display:block;font-size:1.05rem;margin-bottom:6px}
 .preroll p{font-size:.8rem;color:var(--dim);line-height:1.5}
 #calList{display:flex;flex-direction:column;gap:7px;margin-top:12px}
-.calrow{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:14px;
+.calrow{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:3px;
   background:rgba(9,12,18,.55);border:1px solid var(--edge);text-align:left;transition:border-color .18s}
 .calrow i{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 10px currentColor}
 .calrow .n{flex:1;font-weight:600;font-size:.9rem}
@@ -387,22 +396,25 @@ input:focus{border-color:var(--peri);outline:none}
   <div id="flash"></div>
   <div id="banner"><b id="bnT">TERTEMBAK</b><span id="bnS">respawn 5</span></div>
 
+  <div class="hitmark" id="hitmark"><svg viewBox="0 0 40 40">
+    <path d="M8 8l8 8M32 8l-8 8M8 32l8-8M32 32l-8-8"/></svg></div>
+
   <div class="hud">
     <div class="top">
-      <div class="glass hp">
-        <div class="lbl"><span id="meName">PEMAIN</span><span id="protTag" hidden>KEBAL</span><b id="hpTxt">100</b></div>
+      <div class="hbox hp">
+        <div class="lbl"><span id="meName">PLAYER</span><span id="protTag" hidden>IMMUNE</span><b id="hpTxt">100</b></div>
         <div class="hpbar"><i id="hpFill"></i></div>
       </div>
-      <div class="glass" id="score">memuat…</div>
+      <div class="hbox" id="score">—</div>
     </div>
+
     <div class="mid">
       <div id="feed"></div>
       <canvas id="radar" width="208" height="208" hidden></canvas>
     </div>
-    <div id="calbar" hidden></div>
-    <div class="glass" id="diag" hidden></div>
+
     <div class="firehint" id="fireHint" data-i18n="fireHint">Tap anywhere to fire</div>
-    <div class="preroll glass" id="preroll" hidden>
+    <div class="preroll hbox" id="preroll" hidden>
       <b id="prerollTitle">Calibrate first</b>
       <p id="prerollHint">Aim at each opponent and tap their name.</p>
       <div id="calList"></div>
@@ -412,26 +424,27 @@ input:focus{border-color:var(--peri);outline:none}
         <button class="mini" id="btnSkip" hidden>Skip</button>
       </div>
     </div>
+
+    <div id="calbar" hidden></div>
+    <div class="hbox" id="diag" hidden></div>
+
     <div class="bot">
       <button class="mini icon" id="btnMenu" aria-expanded="false">☰</button>
       <div class="pills" id="pills" hidden>
-        <button class="mini" id="btnView">Tampilan</button>
-        <button class="mini" id="btnReload">Isi ulang</button>
-        <button class="mini" id="btnDiag">Diagnosis</button>
+        <button class="mini" id="btnView">Overlay</button>
+        <button class="mini" id="btnReload">Reload</button>
+        <button class="mini" id="btnDiag">Diagnostics</button>
         <button class="mini" id="btnLangGame">EN</button>
-        <button class="mini" id="btnQuit">Keluar</button>
+        <button class="mini" id="btnQuit">Quit</button>
       </div>
-      <div class="trigger gauge">
-        <svg viewBox="0 0 100 100">
-          <defs><linearGradient id="gtrig" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7DF9D9"/><stop offset=".5" stop-color="#8FB8FF"/>
-            <stop offset="1" stop-color="#C6A6FF"/></linearGradient></defs>
-          <circle class="track" cx="50" cy="50" r="44"/>
-          <circle class="fill ammoRing" cx="50" cy="50" r="44"/></svg>
-        <button class="fire" id="btnFire"><span class="ammoText" id="ammo">12<small>PELURU</small></span></button>
+
+      <div class="magwrap">
+        <div class="mag" id="mag"></div>
+        <div class="magnum"><span class="ammoText" id="ammo">12</span><em>/12</em></div>
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- ===================== BOOT ===================== -->
@@ -912,11 +925,11 @@ function handle(d){
     case 'start': S.mode=d.mode; startRound(); break;
     case 'pos': { const p=S.players.get(d.id); if(p){ p.lat=d.lat; p.lng=d.lng; p.head=d.head; } break; }
     case 'hit': if(d.to===S.me.id) takeHit(d.by, d.dmg, d.head); break;
-    case 'hitok': if(d.by===S.me.id){ SFX.hitmark(); buzz([10,30,10]); banner('KENA','-'+CFG.dmg); } break;
+    case 'hitok': if(d.by===S.me.id){ SFX.hitmark(); buzz([10,30,10]); hitMark(false); } break;
     case 'tagged': {
       const by=S.players.get(d.by), to=S.players.get(d.to);
       if(by) by.kills=(by.kills||0)+1; if(to) to.deaths=(to.deaths||0)+1;
-      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); banner(d.head?T('bHead'):T('bTag'),'+1');
+      if(d.by===S.me.id){ SFX.hitmark(); buzz([16,40,16]); hitMark(true); banner(d.head?T('bHead'):T('bTag'),'+1');
         addImpact(innerWidth/2, innerHeight/2, myColor(), S.lock && S.lock.fig); }
       feed(T(d.head?'feedHead':'feedTag', `<b>${by?by.name:'?'}</b>`, `<b>${to?to.name:'?'}</b>`));
       paintScore();
@@ -945,15 +958,24 @@ function paintHP(){
   f.classList.toggle('prot', prot);
   $('#protTag').hidden = !prot;
 }
-const RING=2*Math.PI*44;
 function paintAmmo(){
-  const frac = S.reloading ? 0 : S.ammo/CFG.mag;
-  $$('.ammoRing').forEach(r=>{
-    r.style.strokeDasharray=RING;
-    r.style.strokeDashoffset=RING*(1-frac);
-  });
+  const mag=$('#mag');
+  if(mag){
+    if(mag.children.length!==CFG.mag){
+      mag.innerHTML=Array.from({length:CFG.mag},()=>'<i class="round"></i>').join('');
+    }
+    const col=myColor();
+    [...mag.children].forEach((r,i)=>{
+      const live = !S.reloading && i < S.ammo;
+      r.classList.toggle('live', live);
+      r.classList.toggle('spent', !live);
+      r.style.background = live ? col : '';
+      r.style.boxShadow = live ? `0 0 9px -1px ${col}` : '';
+    });
+    mag.parentElement.classList.toggle('reloading', S.reloading);
+  }
   $$('.ammoText').forEach(a=>{
-    a.innerHTML = (S.reloading?'···':S.ammo)+`<small>${S.reloading?'ISI ULANG':'PELURU'}</small>`;
+    a.textContent = S.reloading ? '··' : S.ammo;
     a.classList.toggle('empty', S.ammo===0 && !S.reloading);
   });
 }
@@ -965,6 +987,11 @@ function paintScore(){
 }
 let feedLines=[];
 function feed(html){ feedLines.unshift(html); feedLines=feedLines.slice(0,4); $('#feed').innerHTML=feedLines.join('<br>'); }
+function hitMark(kill){
+  const m=$('#hitmark'); if(!m) return;
+  m.classList.toggle('kill', !!kill);
+  m.classList.remove('on'); void m.offsetWidth; m.classList.add('on');
+}
 function banner(t,s,hold){ const b=$('#banner'); $('#bnT').textContent=t; $('#bnS').textContent=s||'';
   b.classList.remove('on'); void b.offsetWidth;
   if(hold){ b.style.opacity=1; } else { b.style.opacity=''; b.classList.add('on'); } }
@@ -1448,15 +1475,16 @@ function cycleView(){
    and on a tablet. */
 function fxUnit(){ return Math.min(innerWidth, innerHeight)/100; }
 
-/* A sustained beam, not a projectile: the bolt spans muzzle-to-target for its
-   whole life, built from three stacked strokes — wide haze, coloured glow,
-   thin white core — so it blooms instead of looking like a drawn line. */
+/* Blaster bolt, not a beam: a short capsule of light with a white-hot core and
+   a saturated halo, thrown fast toward the target and leaving a faint streak. */
 function addTracer(x,y,col,hit){
   const u=fxUnit();
-  S.fx.push({ k:'beam', t:now(), col, hit, x, y,
-              ox:innerWidth/2 + (Math.random()*4-2)*u*0.3, oy:innerHeight + u*3 });
+  const bolt={ k:'bolt', t:now(), col, hit, x, y,
+               fig: hit && S.lock ? S.lock.fig : null,
+               ox:innerWidth/2 + (Math.random()*4-2)*u*0.3, oy:innerHeight + u*3 };
+  S.fx.push(bolt);
   S.fx.push({ k:'mz', t:now(), col, x:innerWidth/2, y:innerHeight - u*1.5 });
-  if(hit) addImpact(x, y, col, S.lock && S.lock.fig);
+  return bolt;
 }
 const fxcv=document.createElement('canvas'), fxc=fxcv.getContext('2d');
 function addImpact(x,y,col,fig){
@@ -1494,22 +1522,31 @@ function drawFX(pass){
       continue;
     }
 
-    if(f.k==='beam'){
-      const life=190; if(age>life){ S.fx.splice(i,1); continue; }
-      const k=Math.pow(1-age/life, 1.6);
-      const g=octx.createLinearGradient(f.ox,f.oy,f.x,f.y);
-      g.addColorStop(0,'rgba(255,255,255,0)');
-      g.addColorStop(.14, f.col);
-      g.addColorStop(1, f.col);
+    if(f.k==='bolt'){
+      const travel=105, fade=230;
+      if(age>fade){ S.fx.splice(i,1); continue; }
+      const prog=Math.min(1, age/travel);
+      const dx=f.x-f.ox, dy=f.y-f.oy, len=Math.hypot(dx,dy)||1;
+      const ux=dx/len, uy=dy/len;
+      const hx=f.ox+dx*prog, hy=f.oy+dy*prog;
+      const bolt=Math.min(len*0.34, u*17);              // capsule length
+      const tx=hx-ux*bolt, ty=hy-uy*bolt;
 
-      octx.globalAlpha=k*.20; octx.strokeStyle=g; octx.lineWidth=u*3.4;
-      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
+      if(age<travel){
+        octx.globalAlpha=.22; octx.strokeStyle=f.col; octx.lineWidth=u*3.2;
+        octx.beginPath(); octx.moveTo(tx,ty); octx.lineTo(hx,hy); octx.stroke();
+        octx.globalAlpha=.85; octx.lineWidth=u*1.25;
+        octx.beginPath(); octx.moveTo(tx,ty); octx.lineTo(hx,hy); octx.stroke();
+        octx.globalAlpha=1; octx.strokeStyle='#fff'; octx.lineWidth=u*0.42;
+        octx.beginPath(); octx.moveTo(tx+ux*bolt*.12, ty+uy*bolt*.12); octx.lineTo(hx,hy); octx.stroke();
+        bloom(hx, hy, u*3.6, f.col, .8);
+      }
+      // ionised streak left in the air behind it
+      const sk=1-age/fade;
+      octx.globalAlpha=sk*.16; octx.strokeStyle=f.col; octx.lineWidth=u*0.7;
+      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(hx,hy); octx.stroke();
 
-      octx.globalAlpha=k*.55; octx.lineWidth=u*1.5;
-      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
-
-      octx.globalAlpha=k*.95; octx.strokeStyle='rgba(255,255,255,.95)'; octx.lineWidth=u*0.38;
-      octx.beginPath(); octx.moveTo(f.ox,f.oy); octx.lineTo(f.x,f.y); octx.stroke();
+      if(f.hit && !f.popped && prog>=1){ f.popped=true; addImpact(f.x, f.y, f.col, f.fig); }
       continue;
     }
 
@@ -1751,7 +1788,7 @@ function fire(){
   const t=S.lock;
   if(!t) return;
   if(t.drone){
-    S.drone.hp--; SFX.hitmark();
+    S.drone.hp--; SFX.hitmark(); hitMark(S.drone.hp<=0);
     if(S.drone.hp<=0){ S.me.kills++; paintScore(); banner(T('bDroneDown'),'+1');
       S.drone.el.remove(); S.drone=null; setTimeout(spawnDrone,900); }
     return;
