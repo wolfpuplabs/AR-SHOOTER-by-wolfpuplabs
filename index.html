@@ -210,12 +210,15 @@ input:focus{border-color:var(--peri);outline:none}
 .anchor.tl{top:calc(var(--hpadY) + env(safe-area-inset-top,0px));left:var(--hpadX);align-items:flex-start}
 .anchor.tc{top:calc(var(--hpadY) + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);align-items:center}
 .anchor.tr{top:calc(var(--hpadY) + env(safe-area-inset-top,0px));right:var(--hpadX);align-items:flex-end;max-width:36vw}
-.anchor.bl{bottom:calc(var(--hpadY) + var(--pad));left:var(--hpadX);align-items:flex-start}
-.anchor.br{bottom:calc(var(--hpadY) + var(--pad));right:var(--hpadX);align-items:flex-end}
-.anchor.bc{bottom:calc(var(--hpadY) + var(--pad));left:50%;transform:translateX(-50%);
-  align-items:center;width:min(430px,66vw);pointer-events:none}
+.anchor.bl{bottom:calc(var(--hpadY) + var(--pad));left:var(--hpadX);align-items:flex-start;
+  max-width:min(260px,62vw)}
+.anchor.br{bottom:calc(var(--hpadY) + var(--pad));right:var(--hpadX);align-items:flex-end;
+  max-width:min(260px,54vw)}
+.anchor.bc{bottom:calc(var(--hpadY) + var(--pad) + clamp(74px,16vmin,110px));
+  left:50%;transform:translateX(-50%);align-items:center;
+  width:min(430px,78vw);pointer-events:none}
 .anchor.bc > *{pointer-events:auto}
-.menurow{position:relative}
+
 .hbox{background:rgba(6,12,20,.62);border:1px solid rgba(63,224,255,.34);padding:9px 12px;
   clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
   box-shadow:0 0 18px -8px var(--cy), inset 0 0 22px -18px var(--cy)}
@@ -347,9 +350,14 @@ input:focus{border-color:var(--peri);outline:none}
 .bot{position:relative;justify-content:center}
 .mini.icon{width:42px;height:42px;padding:0;
   display:grid;place-items:center;font-size:1rem;line-height:1;clip-path:none}
-.pills{position:absolute;left:0;bottom:52px;flex-direction:column;align-items:flex-start;
-  gap:8px;z-index:3;animation:rise .22s cubic-bezier(.2,.9,.3,1)}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.pills{position:static;display:grid;grid-template-columns:1fr 1fr;gap:6px;
+  padding:8px;background:rgba(6,12,20,.86);border:1px solid rgba(63,224,255,.34);
+  width:min(240px,58vw);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  animation:rise .2s cubic-bezier(.2,.9,.3,1)}
+.pills .mini{width:100%;text-align:center;padding:9px 6px}
+.pills #btnQuit{grid-column:1 / -1;border-color:rgba(255,46,99,.5);color:var(--mg)}
+@keyframes rise{from{opacity:0;transform:translateY(8px) scale(.97)}}
 .trigger{margin:0 auto}
 .trigger.alt{display:none !important}
 .preroll{position:static;width:100%;text-align:center;padding:14px 16px}
@@ -410,6 +418,7 @@ input:focus{border-color:var(--peri);outline:none}
   .hud{--hpadX:clamp(14px,2.6vw,34px);--hpadY:clamp(12px,2.6vh,26px)}
   .anchor.tr{max-width:26vw}
   .anchor.bc{width:min(420px,40vw)}
+  .pills{width:min(280px,26vw)}
   #scope{width:clamp(190px,28vmin,320px);height:clamp(190px,28vmin,320px)}
 }
 @media (max-height:520px){
@@ -495,16 +504,14 @@ input:focus{border-color:var(--peri);outline:none}
         <div class="vrow"><b class="big" id="hpTxt">100</b><span class="unit">HP</span></div>
         <div class="hpbar"><i id="hpFill"></i></div>
       </div>
-      <div class="menurow">
-        <button class="mini icon" id="btnMenu" aria-expanded="false">☰</button>
-        <div class="pills" id="pills" hidden>
-          <button class="mini" id="btnView">Overlay</button>
-          <button class="mini" id="btnReload">Reload</button>
-          <button class="mini" id="btnDiag">Diagnostics</button>
-          <button class="mini" id="btnLangGame">EN</button>
-          <button class="mini" id="btnQuit">Quit</button>
-        </div>
+      <div class="pills" id="pills" hidden>
+        <button class="mini" id="btnView">Overlay</button>
+        <button class="mini" id="btnReload">Reload</button>
+        <button class="mini" id="btnDiag">Diagnostics</button>
+        <button class="mini" id="btnLangGame">EN</button>
+        <button class="mini" id="btnQuit">Quit</button>
       </div>
+      <button class="mini icon" id="btnMenu" aria-expanded="false">☰</button>
     </div>
 
     <!-- BOTTOM RIGHT: weapon + ammo -->
@@ -1373,6 +1380,8 @@ $('#calbar').addEventListener('pointercancel', ()=>{ clearTimeout(calHold); calH
 
 /* ---------------- diagnostics ---------------- */
 function paintDiag(){
+  const fh=$('#fireHint');
+  if(fh) fh.hidden = S.diag || S.phase==='cal' || S.shotOnce;
   if(!S.diag){ $('#diag').hidden=true; return; }
   $('#diag').hidden=false;
   const L=[`mode ${S.mode}  ping-mates ${S.players.size}`];
@@ -2222,6 +2231,10 @@ $('#btnLangGame').onclick = ()=>{ LANG = LANG==='en'?'id':'en'; applyLang(); };
 $('#btnQuit').onclick = ()=>{ endRound(); };
 $('#ar').addEventListener('pointerdown', e=>{
   if(e.target.closest('button, input, #preroll, #calbar, #diag')) return;
+  const p=$('#pills');
+  if(p && !p.hidden){                       // first tap dismisses the menu
+    p.hidden=true; $('#btnMenu').setAttribute('aria-expanded','false'); return;
+  }
   trigDown(e);
 });
 addEventListener('keydown', e=>{ if(!S.started) return;
@@ -2234,3 +2247,4 @@ paintRoster();
 
 </script>
 </body></html>
+
